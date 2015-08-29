@@ -645,27 +645,31 @@ assign  CPLD_PCH_INT_N         =  1'b1;
 //  CPLD Registers ranged from 0x01 to 0x1F will be R/W registers with initial values defined in CpldRegMap.v
 //  Define RdWrCpldReg to launch stage 2 test that only has PwrSequence,LpcDecode, CpldRegMap and ClockSource modules are instantiated at top module.
 /////////////////////////////////////////////////////////////////////////////
-LpcDecode
-    u_LpcDecode (.ResetN        (RST_PLTRST_N), // In, RST_PLTRST_N from PCH
-                 .lclk          (Mclkx),        // In, 33MHz clock source for LPC
-                 .lframe_n      (LPC_FRAME_N),  // In
-                 .lad           (LPC_LAD),      // Inout[3:0]
-                 .csr_dout      (RdDev_Data_b), // In[7:0]
-                 .DevCs_En      (DevCs_En),     // Out
-                 .DevAddr       (DevAddr),      // Out[15:0]
-                 .RdDev_En      (RdDev_En),     // Out
-                 .WrDev_En      (WrDev_En),     // Out
-                 .WrDev_Data    (WrDev_Data),   // Out[7:0]
-                 .BiosPostData  ());            // Out[7:0]
+wire    [7:0]       DataRd;
+wire    [7:0]       AddrReg;
+wire                WrReg;
+wire                RdReg;
+wire    [7:0]       DataWr;
+
+Lpc
+    u_Lpc (.PciReset    (RST_PLTRST_N), // PCI Reset
+           .LpcClock    (Mclkx),        // 33 MHz Lpc (LPC Clock)
+           .LpcFrame    (LPC_FRAME_N),  // LPC Interface: Frame
+           .LpcBus      (LPC_LAD),      // LPC Interface: Data Bus
+           .DataRd      (DataRd),       // register read data
+           .AddrReg     (AddrReg),      // register address
+           .Wr          (WrReg),        // register write
+           .Rd          (RdReg),        // register read
+           .DataWr      (DataWr));      // register write data
 /////////////////////////////////////////////////////////////////
-CpldRegMap
-    u_CpldRegMap (.MainResetN   (RST_PLTRST_N),     // In, PCH RST_PLTRST_N
-                  .Mclk         (Mclkx),            // In, LPC 33MHz clock input
-                  .DevAddr      (DevAddr),          // In[15:0], IO Address [15:0]
-                  .RdDev_En     (RdDev_En),         // In, Decode LPC I/O Read  command with specific I/O BAR[15:8]
-                  .WrDev_En     (WrDev_En),         // In, Decode LPC I/O Write command with specific I/O BAR[15:8]
-                  .WrDev_Data   (WrDev_Data),       // In[7:0], I/O Write Data byte of the decoded I/O BAR[15:8] ports
-                  .RdDev_Data   (RdDev_Data_b));    // Out[7:0], CPLD's Internal register data ( byte ) that will be output via Lpc Ior command
+LpcReg
+    u_LpcReg (.PciReset (RST_PLTRST_N), // PCI Reset
+              .LpcClock (Mclkx),        // 33 MHz Lpc (LPC Clock)
+              .Addr     (AddrReg),      // register address
+              .Rd       (RdReg),        // read operation
+              .Wr       (WrReg),        // write operation
+              .DataWr   (DataWr),       // write data
+              .DataRd   (DataRd));      // read data
 /////////////////////////////////////////////////////////////////
 ClockSource
     u_ClockSource (.HARD_nRESETi    (RST_RSMRST_N), // In    Frank 07242015 replace (HARD_nRESETi) with (RST_RSMRST_N),

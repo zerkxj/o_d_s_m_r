@@ -16,6 +16,8 @@
 //- `define ONLY_PowerUp        1     // Stage 1 , only PwrSequence 
 `define RdWrCpldReg         1     // Stage 2 , PwrSequence + LPC R/W Access 
 
+`define BAR					16'h0800
+
 `define TRUE			    1
 `define FALSE			    0
 `define HIGH			    1

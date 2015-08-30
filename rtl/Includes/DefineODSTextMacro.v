@@ -14,9 +14,10 @@
 
 //- `define DEBUG_PwrState      1     // Frank 05072015 unmask for test , DEBUG_PwrState  in Led7SegDecode.v
 //- `define ONLY_PowerUp        1     // Stage 1 , only PwrSequence 
-`define RdWrCpldReg         1     // Stage 2 , PwrSequence + LPC R/W Access 
+//`define RdWrCpldReg           1     // Stage 2 , PwrSequence + LPC R/W Access 
+`define DualBIOS                1     // Stage 3, Dual BIOS
 
-`define BAR					16'h0800
+`define BAR 16'h0800
 
 `define TRUE			    1
 `define FALSE			    0

@@ -8,22 +8,29 @@
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 ///////////////////////////////////////////////////////////////////
 module LpcReg (
-    PciReset,   // PCI Reset
-    LpcClock,   // 33 MHz Lpc (LPC Clock)
-    Addr,       // register address
-    Rd,         // read operation
-    Wr,         // write operation
-    DataWr,     // write data
-    DataRd      // read data
+    rst_n,       // reset
+    LpcClock,       // 33 MHz Lpc (LPC Clock)
+    Addr,           // register address
+    Rd,             // read operation
+    Wr,             // write operation
+    DataWr,         // write data
+    DataRd,         // read data
+    Pwr_ok,         // Power is ok
+    Active_Bios     // Provide access to required BIOS chip
 );
 ///////////////////////////////////////////////////////////////////
-input           PciReset;
+input           rst_n;
 input           LpcClock;
 input   [7:0]   Addr;
 input           Rd;
 input           Wr;
 input   [7:0]   DataWr;
 output  [7:0]   DataRd;
+input           Pwr_ok;
+output          Active_Bios;
+
+///////////////////////////////////////////////////////////////////
+wire            Next_Bios;
 ///////////////////////////////////////////////////////////////////
 reg     [7:0]   DataRd;
 reg     [7:0]   reg_00, reg_01, reg_02, reg_03, reg_04, reg_05, reg_06,
@@ -31,10 +38,22 @@ reg     [7:0]   reg_00, reg_01, reg_02, reg_03, reg_04, reg_05, reg_06,
                 reg_0e, reg_0f, reg_10, reg_11, reg_12, reg_13, reg_14,
                 reg_15, reg_16, reg_17, reg_18, reg_19, reg_1a, reg_1b,
                 reg_1c, reg_1d, reg_1e, reg_1f;
-///////////////////////////////////////////////////////////////////
+reg             Next_Bios_latch;
 
-always @ (posedge LpcClock or negedge PciReset) begin
-    if (!PciReset)
+///////////////////////////////////////////////////////////////////
+assign Next_Bios = reg_04[1];
+assign Active_Bios = reg_04[0];
+
+///////////////////////////////////////////////////////////////////
+always @ (rst_n) begin
+    if (rst_n)
+        Next_Bios_latch <= Next_Bios;
+    else
+        Next_Bios_latch <= Next_Bios_latch;
+end
+
+always @ (posedge LpcClock or negedge rst_n) begin
+    if (!rst_n)
         DataRd <= 8'hFF;
     else if (Rd) begin
             case (Addr)
@@ -76,13 +95,14 @@ always @ (posedge LpcClock or negedge PciReset) begin
                 DataRd <= DataRd;
 end
 
-always @ (posedge LpcClock or negedge PciReset) begin
-    if (!PciReset) begin
+always @ (posedge LpcClock or negedge rst_n) begin
+    if (!rst_n) begin
         reg_00 <= {`FPGAID_CODE , `VERSION_CODE};
         reg_01 <= 8'h55;                           // R/W ( for Offset 0x01 ~ 0x1F )
         reg_02 <= 8'hAA;
         reg_03 <= 8'h66;
-        reg_04 <= 8'h00;
+        reg_04 <= {5'h00, (Pwr_ok&Next_Bios_latch),
+                   ((~Pwr_ok)|(~Next_Bios_latch)), (Pwr_ok&Next_Bios_latch)};
         reg_05 <= 8'h77;
         reg_06 <= 8'h88;
         reg_07 <= 8'h44;
@@ -116,7 +136,7 @@ always @ (posedge LpcClock or negedge PciReset) begin
                     8'h01: reg_01 <= DataWr;
                     8'h02: reg_02 <= DataWr;
                     8'h03: reg_03 <= DataWr;
-                    8'h04: reg_04 <= DataWr;
+                    8'h04: reg_04 <= {DataWr[7:3], reg_04[2], DataWr[1:0]};
                     8'h05: reg_05 <= DataWr;
                     8'h06: reg_06 <= DataWr;
                     8'h07: reg_07 <= DataWr;

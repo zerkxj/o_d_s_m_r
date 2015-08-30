@@ -5,10 +5,11 @@
 //                    Dual BIOS control, LPC decode, 7Seg LED decode.
 // Hierarchy Up     : ---
 // Hierarchy Down   : PwrSequence
+//                    Lpc
+//                    LpcReg
 //                    UFMRwPageDecode
 //                    MR_Bsp
 //                    HwResetGenerate
-//                    LpcDecode
 //                    GLANLED_2Port
 //                    DualPSCfg
 //                    PwrEvent
@@ -18,7 +19,6 @@
 //                    BiosWdtDecode
 //                    PwrBtnControl
 //                    DMEInit
-//                    CpldRegMap
 //////////////////////////////////////////////////////////////////////////////
 `timescale 1 ns / 100 ps
 `include "../Verilog/Includes/DefineODSTextMacro.v"
@@ -33,8 +33,9 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 // ***** ifdef_4 ************************************************************
-`ifdef RdWrCpldReg         // RdWrCpldReg : Stage 2  test : PwrSequence + LPC R/W access ( No specific function include yet )
+`ifdef  DualBIOS            // Stage 3, Dual BIOS
 `define ONLY_PowerUp    1   // Original definition has been moved to DefineODSTextMacro.v
+`define RdWrCpldReg     1   // Original definition has been moved to DefineODSTextMacro.v
 `endif
 // ***** End of ifdef_4 *****************************************************
 //////////////////////////////////////////////////////////////////////////////
@@ -443,7 +444,9 @@ wire    [15:0]  DevAddr;
 wire            Mclkx;
 `endif
 // ***** End of ifdef_7 *****************************************************
-//
+`ifdef DualBIOS
+wire            Active_Bios;
+`endif
 // ***** ifndef_n1 **********************************************************
 `ifndef ONLY_PowerUp
 // All modules will be instantiated
@@ -618,8 +621,8 @@ PwrSequence
 // Only PwrSequence module will be instantiated with some additional assignments
 assign  FM_SYS_SIO_PWRBTN_N    =  PWR_BTN_IN_N;     // PWR_BTN_IN_N is not controlled.
 assign  RST_PCH_RSTBTN_N       =  SYS_RST_IN_N;     // SYS_RST_IN_N is not controlled.
-assign  BIOS_CS_N[0]           =  SPI_PCH_CS0_N;    // BIOS_CS_N[0] ( Low Active )  asserted, Bypass SPI_PCH_CS0_N to BIOS_CS_N[0]
-assign  BIOS_CS_N[1]           =  1'b1;             // BIOS_CS_N[1] ( Low Active ) Not asserted
+assign  BIOS_CS_N[0]           =  Active_Bios ? 1'b1 : 1'b0;
+assign  BIOS_CS_N[1]           =  Active_Bios ? 1'b0 : 1'b1;
 assign  BIOS_LED_N[0]          =  1'b0;
 assign  BIOS_LED_N[1]          =  1'b1;
 assign  RST_PLTRST_BUF_N       =  RST_PLTRST_N;
@@ -663,13 +666,15 @@ Lpc
            .DataWr      (DataWr));      // register write data
 /////////////////////////////////////////////////////////////////
 LpcReg
-    u_LpcReg (.PciReset (RST_PLTRST_N), // PCI Reset
-              .LpcClock (Mclkx),        // 33 MHz Lpc (LPC Clock)
-              .Addr     (AddrReg),      // register address
-              .Rd       (RdReg),        // read operation
-              .Wr       (WrReg),        // write operation
-              .DataWr   (DataWr),       // write data
-              .DataRd   (DataRd));      // read data
+    u_LpcReg (.rst_n        (RST_PLTRST_N),         // PCI Reset
+              .LpcClock     (Mclkx),                // 33 MHz Lpc (LPC Clock)
+              .Addr         (AddrReg),              // register address
+              .Rd           (RdReg),                // read operation
+              .Wr           (WrReg),                // write operation
+              .DataWr       (DataWr),               // write data
+              .DataRd       (DataRd),               // read data
+              .Pwr_ok       (PWRGD_PS_PWROK_3V3),   // Power is ok
+              .Active_Bios  (Active_Bios));         // Provide access to required BIOS chip
 /////////////////////////////////////////////////////////////////
 ClockSource
     u_ClockSource (.HARD_nRESETi    (RST_RSMRST_N), // In    Frank 07242015 replace (HARD_nRESETi) with (RST_RSMRST_N),

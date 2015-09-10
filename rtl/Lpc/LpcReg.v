@@ -2,37 +2,96 @@
 // File name        : LpcReg.v
 // Module name      : LpcReg
 // Description      : This module is LPC  register
-// Hierarchy Up     : ODS_MR
+// Hierarchy Up     : Lpc
 // Hierarchy Down   : None
 ///////////////////////////////////////////////////////////////////
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 ///////////////////////////////////////////////////////////////////
 module LpcReg (
-    rst_n,       // reset
+    PciReset,       // reset
     LpcClock,       // 33 MHz Lpc (LPC Clock)
     Addr,           // register address
-    Rd,             // read operation
     Wr,             // write operation
     DataWr,         // write data
-    DataRd,         // read data
     Pwr_ok,         // Power is ok
+    reg_00,
+    reg_01,
+    reg_02,
+    reg_03,
+    reg_04,
+    reg_05,
+    reg_06,
+    reg_07,
+    reg_08,
+    reg_09,
+    reg_0a,
+    reg_0b,
+    reg_0c,
+    reg_0d,
+    reg_0e,
+    reg_0f,
+    reg_10,
+    reg_11,
+    reg_12,
+    reg_13,
+    reg_14,
+    reg_15,
+    reg_16,
+    reg_17,
+    reg_18,
+    reg_19,
+    reg_1a,
+    reg_1b,
+    reg_1c,
+    reg_1d,
+    reg_1e,
+    reg_1f,
     Active_Bios     // Provide access to required BIOS chip
 );
 ///////////////////////////////////////////////////////////////////
-input           rst_n;
+input           PciReset;
 input           LpcClock;
 input   [7:0]   Addr;
-input           Rd;
 input           Wr;
 input   [7:0]   DataWr;
-output  [7:0]   DataRd;
 input           Pwr_ok;
+output  [7:0]   reg_00;
+output  [7:0]   reg_01;
+output  [7:0]   reg_02;
+output  [7:0]   reg_03;
+output  [7:0]   reg_04;
+output  [7:0]   reg_05;
+output  [7:0]   reg_06;
+output  [7:0]   reg_07;
+output  [7:0]   reg_08;
+output  [7:0]   reg_09;
+output  [7:0]   reg_0a;
+output  [7:0]   reg_0b;
+output  [7:0]   reg_0c;
+output  [7:0]   reg_0d;
+output  [7:0]   reg_0e;
+output  [7:0]   reg_0f;
+output  [7:0]   reg_10;
+output  [7:0]   reg_11;
+output  [7:0]   reg_12;
+output  [7:0]   reg_13;
+output  [7:0]   reg_14;
+output  [7:0]   reg_15;
+output  [7:0]   reg_16;
+output  [7:0]   reg_17;
+output  [7:0]   reg_18;
+output  [7:0]   reg_19;
+output  [7:0]   reg_1a;
+output  [7:0]   reg_1b;
+output  [7:0]   reg_1c;
+output  [7:0]   reg_1d;
+output  [7:0]   reg_1e;
+output  [7:0]   reg_1f;
 output          Active_Bios;
 
 ///////////////////////////////////////////////////////////////////
 wire            Next_Bios;
 ///////////////////////////////////////////////////////////////////
-reg     [7:0]   DataRd;
 reg     [7:0]   reg_00, reg_01, reg_02, reg_03, reg_04, reg_05, reg_06,
                 reg_07, reg_08, reg_09, reg_0a, reg_0b, reg_0c, reg_0d,
                 reg_0e, reg_0f, reg_10, reg_11, reg_12, reg_13, reg_14,
@@ -45,58 +104,15 @@ assign Next_Bios = reg_04[1];
 assign Active_Bios = reg_04[0];
 
 ///////////////////////////////////////////////////////////////////
-always @ (rst_n) begin
-    if (rst_n)
+always @ (PciReset) begin
+    if (PciReset)
         Next_Bios_latch <= Next_Bios;
     else
         Next_Bios_latch <= Next_Bios_latch;
 end
 
-always @ (posedge LpcClock or negedge rst_n) begin
-    if (!rst_n)
-        DataRd <= 8'hFF;
-    else if (Rd) begin
-            case (Addr)
-                8'h00: DataRd <= reg_00;
-                8'h01: DataRd <= reg_01;
-                8'h02: DataRd <= reg_02;
-                8'h03: DataRd <= reg_03;
-                8'h04: DataRd <= reg_04;
-                8'h05: DataRd <= reg_05;
-                8'h06: DataRd <= reg_06;
-                8'h07: DataRd <= reg_07;
-                8'h08: DataRd <= reg_08;
-                8'h09: DataRd <= reg_09;
-                8'h0A: DataRd <= reg_0a;
-                8'h0B: DataRd <= reg_0b;
-                8'h0C: DataRd <= reg_0c;
-                8'h0D: DataRd <= reg_0d;
-                8'h0E: DataRd <= reg_0e;
-                8'h0F: DataRd <= reg_0f;
-                8'h10: DataRd <= reg_10;
-                8'h11: DataRd <= reg_11;
-                8'h12: DataRd <= reg_12;
-                8'h13: DataRd <= reg_13;
-                8'h14: DataRd <= reg_14;
-                8'h15: DataRd <= reg_15;
-                8'h16: DataRd <= reg_16;
-                8'h17: DataRd <= reg_17;
-                8'h18: DataRd <= reg_18;
-                8'h19: DataRd <= reg_19;
-                8'h1A: DataRd <= reg_1a;
-                8'h1B: DataRd <= reg_1b;
-                8'h1C: DataRd <= reg_1c;
-                8'h1D: DataRd <= reg_1d;
-                8'h1E: DataRd <= reg_1e;
-                8'h1F: DataRd <= reg_1f;
-                default: DataRd <= 8'hFF;
-            endcase
-         end else
-                DataRd <= DataRd;
-end
-
-always @ (posedge LpcClock or negedge rst_n) begin
-    if (!rst_n) begin
+always @ (posedge LpcClock or negedge PciReset) begin
+    if (!PciReset) begin
         reg_00 <= {`FPGAID_CODE , `VERSION_CODE};
         reg_01 <= 8'h55;                           // R/W ( for Offset 0x01 ~ 0x1F )
         reg_02 <= 8'hAA;

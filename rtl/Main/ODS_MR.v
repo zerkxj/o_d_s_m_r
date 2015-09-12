@@ -227,13 +227,16 @@ input           MCLK_FPGA;      // 33MHz
 input           LCLK_CPLD;      // LPC bus clock
 input           LPC_FRAME_N;
 inout   [3:0]   LPC_LAD;
-
+////////////////////////////////////////////////////////////////////////////
 wire            FM_PLD_DEBUG2;
 wire            FM_PLD_DEBUG3;
 wire            FM_PLD_DEBUG4;
 wire            FM_PLD_DEBUG5;
 
+wire            Next_Bios_latch;
+wire            Next_Bios;
 wire            Active_Bios;
+
 ////////////////////////////////////////////////////////////////////////////
 /////         Module Instantiation
 ////////////////////////////////////////////////////////////////////////////
@@ -318,8 +321,8 @@ PwrSequence
 
 assign  FM_SYS_SIO_PWRBTN_N    =  PWR_BTN_IN_N;     // PWR_BTN_IN_N is not controlled.
 assign  RST_PCH_RSTBTN_N       =  SYS_RST_IN_N;     // SYS_RST_IN_N is not controlled.
-assign  BIOS_CS_N[0]           =  Active_Bios ? 1'b1 : 1'b0;
-assign  BIOS_CS_N[1]           =  Active_Bios ? 1'b0 : 1'b1;
+//assign  BIOS_CS_N[0]           =  Active_Bios ? 1'b1 : 1'b0;
+//assign  BIOS_CS_N[1]           =  Active_Bios ? 1'b0 : 1'b1;
 assign  BIOS_LED_N[0]          =  1'b0;
 assign  BIOS_LED_N[1]          =  1'b1;
 assign  RST_PLTRST_BUF_N       =  RST_PLTRST_N;
@@ -338,24 +341,21 @@ assign  CPLD_LAN_ACT_N[1]      =  2'b11 == {LAN_LINK1000_N[1], LAN_LINK100_N[1]}
 assign  UNLOCK_BIOS_ME         =  1'bz;
 assign  CPLD_PCH_INT_N         =  1'b1;
 
-wire    [7:0]       DataRd;
-wire    [7:0]       AddrReg;
-wire                WrReg;
-wire                RdReg;
-wire    [7:0]       DataWr;
-
 Lpc
-    u_Lpc (.PciReset(RST_PLTRST_N), // PCI Reset
-           .LpcClock(MCLK_FPGA),    // 33 MHz Lpc (LPC Clock)
-           .LpcFrame(LPC_FRAME_N),  // LPC Interface: Frame
-           .LpcBus(LPC_LAD),        // LPC Interface: Data Bus
-           .DataRd(DataRd),         // register read data
-           .AddrReg(AddrReg),       // register address
-           .Wr(WrReg),              // register write
-           .Rd(RdReg),              // register read
-           .Pwr_ok(PWRGD_PS_PWROK_3V3), // Carlos
-           .Active_Bios(Active_Bios), // Carlos
-           .DataWr(DataWr));        // register write data
+    u_Lpc (.PciReset(RST_PLTRST_N),             // PCI Reset
+           .LpcClock(MCLK_FPGA),                // 33 MHz Lpc (LPC Clock)
+           .LpcFrame(LPC_FRAME_N),              // LPC Interface: Frame
+           .LpcBus(LPC_LAD),                    // LPC Interface: Data Bus
+           .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
+           .Next_Bios(Next_Bios),               // Next BIOS number after reset
+           .Active_Bios(Active_Bios));          // BIOS number of current active
 
+BiosControl
+    u_BiosControl (.PciReset(RST_PLTRST_N),             // reset
+                   .Pwr_ok(PWRGD_PS_PWROK_3V3),         // power is available
+                   .Next_Bios(Next_Bios),               // Next BIOS number after reset
+                   .Active_Bios(Active_Bios),           // BIOS current active
+                   .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
+                   .BIOS_CS_N(BIOS_CS_N));               // BIOS chip select
 
 endmodule  // end of ODS_MR,  top  module of this project

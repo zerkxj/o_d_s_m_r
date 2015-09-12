@@ -11,7 +11,7 @@ module LpcControl (
     Opcode,     // LPC operation (0 - Read, 1 - Write)
     AddrReg,    // Address of the accessed Register
     State,      // Decoding Status
-    DataRd,     // Output Multiplexed Data
+    DataRd,     // Multiplexed Data
     LpcBus      // LPC Address Data
 );
 ///////////////////////////////////////////////////////////////////

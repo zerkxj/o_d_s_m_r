@@ -8,34 +8,26 @@
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 ///////////////////////////////////////////////////////////////////
 module Lpc (
-    PciReset,   // PCI Reset
-    LpcClock,   // 33 MHz Lpc (LPC Clock)
-    LpcFrame,   // LPC Interface: Frame
-    LpcBus,     // LPC Interface: Data Bus
-    DataRd,     // register read data
-    AddrReg,    // register address
-    Wr,         // register write
-    Rd,         // register read
-    Pwr_ok,// Carlos
-    Active_Bios, // Carlos
-    DataWr      // register write data
+    PciReset,           // PCI Reset
+    LpcClock,           // 33 MHz Lpc (LPC Clock)
+    LpcFrame,           // LPC Interface: Frame
+    LpcBus,             // LPC Interface: Data Bus
+    Next_Bios_latch,    // Next BIOS number after reset
+    Next_Bios,          // Next BIOS number after reset
+    Active_Bios        // BIOS number of current active
 );
 ///////////////////////////////////////////////////////////////////
 input           PciReset;
 input           LpcClock;
 input           LpcFrame;
 inout   [3:0]   LpcBus;
-input   [7:0]   DataRd;
-output  [7:0]   AddrReg;
-output          Wr;
-output          Rd;
-input           Pwr_ok;// Carlos
-output          Active_Bios; // Carlos
-output  [7:0]   DataWr;
+input           Next_Bios_latch;
+output          Next_Bios;
+output          Active_Bios;
 ///////////////////////////////////////////////////////////////////
 wire            Opcode;
-wire            wr;
-wire            rd;
+wire            Wr;
+wire            Rd;
 wire    [7:0]   AddrReg;
 wire    [7:0]   DataWr;
 wire    [10:6]  StateOut;
@@ -61,18 +53,19 @@ LpcControl
                   .Opcode(Opcode),      // LPC operation (0 - Read, 1 - Write)
                   .State(StateOut),     // Decoding Status
                   .AddrReg(AddrReg),    // Address of the accessed Register
-                  .DataRd(DataRd),      // Output Multiplexed Data
+                  .DataRd(DataRd),      // Multiplexed Data
                   .LpcBus(LpcBus));     // LPC Address Data
 
 LpcReg
-    u_LpcReg (.PciReset(PciReset),          // reset
-              .LpcClock(LpcClock),          // 33 MHz Lpc (LPC Clock)
-              .Addr(AddrReg),               // register address
-              .Wr(Wr),                      // write operation
-              .DataWr(DataWr),              // write data
-              .Pwr_ok(Pwr_ok),              // Power is ok
-              .DataReg(DataReg),            // Register data
-              .Active_Bios(Active_Bios));   // Provide access to required BIOS chip
+    u_LpcReg (.PciReset(PciReset),                  // reset
+              .LpcClock(LpcClock),                  // 33 MHz Lpc (LPC Clock)
+              .Addr(AddrReg),                       // register address
+              .Wr(Wr),                              // write operation
+              .DataWr(DataWr),                      // write data
+              .Next_Bios_latch(Next_Bios_latch),    // Next BIOS number after reset
+              .DataReg(DataReg),                    // Register data
+              .Next_Bios(Next_Bios),                // Next BIOS number after reset
+              .Active_Bios(Active_Bios));           // Provide access to required BIOS chip
 
 LpcMux
     u_LpcMux (.PciReset(PciReset),  // PCI Reset

@@ -323,8 +323,8 @@ assign  FM_SYS_SIO_PWRBTN_N    =  PWR_BTN_IN_N;     // PWR_BTN_IN_N is not contr
 assign  RST_PCH_RSTBTN_N       =  SYS_RST_IN_N;     // SYS_RST_IN_N is not controlled.
 //assign  BIOS_CS_N[0]           =  Active_Bios ? 1'b1 : 1'b0;
 //assign  BIOS_CS_N[1]           =  Active_Bios ? 1'b0 : 1'b1;
-assign  BIOS_LED_N[0]          =  1'b0;
-assign  BIOS_LED_N[1]          =  1'b1;
+assign  BIOS_LED_N[0]          =  BIOS_CS_N[0];
+assign  BIOS_LED_N[1]          =  BIOS_CS_N[1];
 assign  RST_PLTRST_BUF_N       =  RST_PLTRST_N;
 assign  RST_PERST0_N           =  RST_PLTRST_N;
 assign  RST_BCM56842_N_R       =  RST_PLTRST_N;
@@ -343,7 +343,7 @@ assign  CPLD_PCH_INT_N         =  1'b1;
 
 Lpc
     u_Lpc (.PciReset(RST_PLTRST_N),             // PCI Reset
-           .LpcClock(MCLK_FPGA),                // 33 MHz Lpc (LPC Clock)
+           .LpcClock(LCLK_CPLD),                // 33 MHz Lpc (LPC Clock)
            .LpcFrame(LPC_FRAME_N),              // LPC Interface: Frame
            .LpcBus(LPC_LAD),                    // LPC Interface: Data Bus
            .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset

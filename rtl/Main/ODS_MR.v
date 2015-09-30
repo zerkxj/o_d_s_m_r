@@ -234,6 +234,7 @@ wire            FM_PLD_DEBUG4;
 wire            FM_PLD_DEBUG5;
 
 wire            Next_Bios_latch;
+wire            Current_Bios;
 wire            Next_Bios;
 wire            Active_Bios;
 
@@ -317,14 +318,14 @@ PwrSequence
                    .FM_PLD_DEBUG3                   (FM_PLD_DEBUG3),                    // Out
                    .FM_PLD_DEBUG4                   (FM_PLD_DEBUG4),                    // Out
                    .FM_PLD_DEBUG5                   (FM_PLD_DEBUG5),                    // Out
-                   .PsonFromPwrEvent                (PsonFromPwrEvent));                // In, Integration to MstrSeq.sv is not validated yet.
+                   .PsonFromPwrEvent                (1'b1));                // In, Integration to MstrSeq.sv is not validated yet.
 
 assign  FM_SYS_SIO_PWRBTN_N    =  PWR_BTN_IN_N;     // PWR_BTN_IN_N is not controlled.
 assign  RST_PCH_RSTBTN_N       =  SYS_RST_IN_N;     // SYS_RST_IN_N is not controlled.
 //assign  BIOS_CS_N[0]           =  Active_Bios ? 1'b1 : 1'b0;
 //assign  BIOS_CS_N[1]           =  Active_Bios ? 1'b0 : 1'b1;
-assign  BIOS_LED_N[0]          =  BIOS_CS_N[0];
-assign  BIOS_LED_N[1]          =  BIOS_CS_N[1];
+assign  BIOS_LED_N[0]          =  Current_Bios;
+assign  BIOS_LED_N[1]          =  ~Current_Bios;
 assign  RST_PLTRST_BUF_N       =  RST_PLTRST_N;
 assign  RST_PERST0_N           =  RST_PLTRST_N;
 assign  RST_BCM56842_N_R       =  RST_PLTRST_N;
@@ -347,6 +348,7 @@ Lpc
            .LpcFrame(LPC_FRAME_N),              // LPC Interface: Frame
            .LpcBus(LPC_LAD),                    // LPC Interface: Data Bus
            .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
+           .Current_Bios(Current_Bios),         // Current BIOS number
            .Next_Bios(Next_Bios),               // Next BIOS number after reset
            .Active_Bios(Active_Bios));          // BIOS number of current active
 
@@ -355,6 +357,7 @@ BiosControl
                    .Pwr_ok(PWRGD_PS_PWROK_3V3),         // power is available
                    .Next_Bios(Next_Bios),               // Next BIOS number after reset
                    .Active_Bios(Active_Bios),           // BIOS current active
+                   .SPI_PCH_CS0_N(SPI_PCH_CS0_N),       // BIOS chip select from PCH
                    .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
                    .BIOS_CS_N(BIOS_CS_N));               // BIOS chip select
 

@@ -56,18 +56,16 @@ input   [7:0]   AddrReg;
 input   [7:0]   DataReg [31:0];
 output  [7:0]   DataRd;
 ///////////////////////////////////////////////////////////////////
-int loop;
 int k;
 ///////////////////////////////////////////////////////////////////
 reg     [7:0]   Mux;
 reg     [7:0]   DataRd;
 ///////////////////////////////////////////////////////////////////
 always @ (AddrReg or DataReg[k]) begin
-    for (loop=0; loop<256; loop=loop+1)
-        if (loop < 32)
-            Mux = DataReg[loop];
-        else
-            Mux = 8'h00;
+    if (AddrReg < 32)
+        Mux = DataReg[AddrReg];
+    else
+        Mux = 8'h00;
 end
 
 always @ (posedge LpcClock or negedge PciReset) begin

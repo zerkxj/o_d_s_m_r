@@ -15,6 +15,7 @@ module LpcReg (
     DataWr,             // write data
     Next_Bios_latch,    // Next BIOS number after reset
     DataReg,            // Register data
+    Current_Bios,       // Current BIOS number
     Next_Bios,          // Next BIOS number after reset
     Active_Bios         // Provide access to required BIOS chip
 );
@@ -26,17 +27,17 @@ input           Wr;
 input   [7:0]   DataWr;
 input           Next_Bios_latch;
 output  [7:0]   DataReg [31:0];
+output          Current_Bios;
 output          Next_Bios;
 output          Active_Bios;
 
 ///////////////////////////////////////////////////////////////////
 int loop;
 ///////////////////////////////////////////////////////////////////
-wire            Next_Bios;
-///////////////////////////////////////////////////////////////////
 reg     [7:0]   DataReg [31:0];
 
 ///////////////////////////////////////////////////////////////////
+assign Current_Bios = DataReg[4][2];
 assign Next_Bios = DataReg[4][1];
 assign Active_Bios = DataReg[4][0];
 
@@ -48,7 +49,7 @@ always @ (posedge LpcClock or negedge PciReset) begin
     else
         for (loop=0; loop<32; loop=loop+1) begin
             if (Wr)
-                DataReg[loop] <= DataMask(loop, DataWr, DataReg[loop]);
+                DataReg[Addr] <= DataMask(loop, DataWr, DataReg[loop]);
             else
                 DataReg[loop] <= DataReg[loop];
         end
@@ -104,6 +105,7 @@ function [7:0] DataMask(input [7:0] Addr,
     reg [7:0]   MaskWr;
 
     case (Addr)
+        8'h00: MaskWr = 8'h00;
         8'h04: MaskWr = 8'hFD;
         default: MaskWr = 8'hFF;
     endcase

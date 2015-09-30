@@ -13,8 +13,9 @@ module Lpc (
     LpcFrame,           // LPC Interface: Frame
     LpcBus,             // LPC Interface: Data Bus
     Next_Bios_latch,    // Next BIOS number after reset
+    Current_Bios,       // Current BIOS number
     Next_Bios,          // Next BIOS number after reset
-    Active_Bios        // BIOS number of current active
+    Active_Bios         // BIOS number of current active
 );
 ///////////////////////////////////////////////////////////////////
 input           PciReset;
@@ -22,6 +23,7 @@ input           LpcClock;
 input           LpcFrame;
 inout   [3:0]   LpcBus;
 input           Next_Bios_latch;
+output          Current_Bios;
 output          Next_Bios;
 output          Active_Bios;
 ///////////////////////////////////////////////////////////////////
@@ -64,6 +66,7 @@ LpcReg
               .DataWr(DataWr),                      // write data
               .Next_Bios_latch(Next_Bios_latch),    // Next BIOS number after reset
               .DataReg(DataReg),                    // Register data
+              .Current_Bios(Current_Bios),          // Current BIOS number
               .Next_Bios(Next_Bios),                // Next BIOS number after reset
               .Active_Bios(Active_Bios));           // Provide access to required BIOS chip
 

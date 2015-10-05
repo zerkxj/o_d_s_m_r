@@ -434,7 +434,7 @@ Lpc
 
 BiosControl
     u_BiosControl (.ResetN(RST_RSMRST_N),       // Power reset
-                   .MainReset(RST_PLTRST_N),    // Power or Controller ICH10R Reset
+                   .MainReset(!RST_PLTRST_N),    // Power or Controller ICH10R Reset
                    .LpcClock(LCLK_CPLD),        // 33 MHz Lpc (Altera Clock)
                    .Write(Wr),                  // Write Access to CPLD registor
                    .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)

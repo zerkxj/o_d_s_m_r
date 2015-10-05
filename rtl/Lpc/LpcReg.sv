@@ -8,16 +8,13 @@
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 ///////////////////////////////////////////////////////////////////
 module LpcReg (
-    PciReset,           // reset
-    LpcClock,           // 33 MHz Lpc (LPC Clock)
-    Addr,               // register address
-    Wr,                 // write operation
-    DataWr,             // write data
-    Next_Bios_latch,    // Next BIOS number after reset
-    DataReg,            // Register data
-    Current_Bios,       // Current BIOS number
-    Next_Bios,          // Next BIOS number after reset
-    Active_Bios         // Provide access to required BIOS chip
+    PciReset,       // reset
+    LpcClock,       // 33 MHz Lpc (LPC Clock)
+    Addr,           // register address
+    Wr,             // write operation
+    DataWr,         // write data
+    BiosStatus,      // BIOS status setup value
+    DataReg         // Register data
 );
 ///////////////////////////////////////////////////////////////////
 input           PciReset;
@@ -25,11 +22,8 @@ input           LpcClock;
 input   [7:0]   Addr;
 input           Wr;
 input   [7:0]   DataWr;
-input           Next_Bios_latch;
+input   [2:0]   BiosStatus;
 output  [7:0]   DataReg [31:0];
-output          Current_Bios;
-output          Next_Bios;
-output          Active_Bios;
 
 ///////////////////////////////////////////////////////////////////
 int loop;
@@ -37,19 +31,14 @@ int loop;
 reg     [7:0]   DataReg [31:0];
 
 ///////////////////////////////////////////////////////////////////
-assign Current_Bios = DataReg[4][2];
-assign Next_Bios = DataReg[4][1];
-assign Active_Bios = DataReg[4][0];
-
-///////////////////////////////////////////////////////////////////
 always @ (posedge LpcClock or negedge PciReset) begin
     if (!PciReset)
         for (loop=0; loop<32; loop=loop+1)
-            DataReg[loop] <= ResetValue(loop, Next_Bios_latch);
+            DataReg[loop] <= ResetValue(loop, BiosStatus);
     else
         for (loop=0; loop<32; loop=loop+1) begin
             if (Wr)
-                DataReg[Addr] <= DataMask(loop, DataWr, DataReg[loop]);
+                DataReg[Addr] <= DataMask(Addr, DataWr, DataReg[loop]);
             else
                 DataReg[loop] <= DataReg[loop];
         end
@@ -57,15 +46,14 @@ end
 
 ///////////////////////////////////////////////////////////////////
 function [7:0] ResetValue(input [7:0] addr,
-                          input Next_Bios_latch);
+                          input [2:0] BiosStatus);
 
     case (addr)
         8'h00: ResetValue = {`FPGAID_CODE , `VERSION_CODE};
         8'h01: ResetValue = 8'h55;                           // R/W ( for Offset 0x01 ~ 0x1F )
         8'h02: ResetValue = 8'hAA;
         8'h03: ResetValue = 8'h66;
-        8'h04: ResetValue = {5'h00, Next_Bios_latch, (~Next_Bios_latch),
-                             Next_Bios_latch};
+        8'h04: ResetValue = {5'h00, BiosStatus};
         8'h05: ResetValue = 8'h77;
         8'h06: ResetValue = 8'h88;
         8'h07: ResetValue = 8'h44;
@@ -106,7 +94,7 @@ function [7:0] DataMask(input [7:0] Addr,
 
     case (Addr)
         8'h00: MaskWr = 8'h00;
-        8'h04: MaskWr = 8'hFD;
+        8'h04: MaskWr = 8'h00;
         default: MaskWr = 8'hFF;
     endcase
 

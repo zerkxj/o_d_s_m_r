@@ -38,7 +38,10 @@ always @ (posedge LpcClock or negedge PciReset) begin
     else
         for (loop=0; loop<32; loop=loop+1) begin
             if (Wr)
-                DataReg[Addr] <= DataMask(Addr, DataWr, DataReg[loop]);
+                if (Addr == loop)
+                    DataReg[loop] <= DataMask(loop, DataWr, DataReg[loop]);
+                else
+                    DataReg[loop] <= DataReg[loop];
             else
                 DataReg[loop] <= DataReg[loop];
         end
@@ -94,7 +97,18 @@ function [7:0] DataMask(input [7:0] Addr,
 
     case (Addr)
         8'h00: MaskWr = 8'h00;
-        8'h04: MaskWr = 8'h00;
+        8'h04: MaskWr = 8'h1B;
+        8'h08: MaskWr = 8'h40;
+        8'h09: MaskWr = 8'h7F;
+        8'h0A: MaskWr = 8'hF1;
+        8'h0B: MaskWr = 8'h1F;
+        8'h0C: MaskWr = 8'h00;
+        8'h0E: MaskWr = 8'h1F;
+        8'h10: MaskWr = 8'h00;
+        8'h11: MaskWr = 8'h01;
+        8'h13: MaskWr = 8'h00;
+        8'h19: MaskWr = 8'h00;
+        8'h1E: MaskWr = 8'h30;
         default: MaskWr = 8'hFF;
     endcase
 

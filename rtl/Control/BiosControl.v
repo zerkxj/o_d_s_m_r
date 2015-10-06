@@ -6,43 +6,68 @@
 // Hierarchy Up     : ODS_MR
 // Hierarchy Down   :
 //////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////
-`include        "../Verilog/Control/OpenDrain.v"
-///////////////////////////////////////////////////////////////////
 module BiosControl (
-    PciReset,           // reset
-    Pwr_ok,             // power is available
-    Next_Bios,          // Next BIOS number after reset
-    Active_Bios,        // BIOS current active
-    SPI_PCH_CS0_N,      // BIOS chip select from PCH
-    Next_Bios_latch,    // Next BIOS number after reset
-    BIOS_CS_N           // BIOS chip select
+    ResetN,         // Power reset
+    MainReset,      // Power or Controller ICH10R Reset
+    LpcClock,       // 33 MHz Lpc (Altera Clock)
+    Write,          // Write Access to CPLD registor
+    BiosCS,         // ICH10 BIOS Chip Select (SPI Interface)
+    BIOS_SEL,       // BIOS SELECT  - Bios Select Jumper (default "1")
+    SwapDisable,    // Disable BIOS Swapping after Power Up
+    ForceSwap,      // BiosWD Occurred, Force BIOS Swap while power restart
+    RegAddress,     // Address of the accessed Register
+    DataWr,         // Data to be written to CPLD Register
+    BIOS,           // Chip Select to SPI Flash Memories
+    BiosStatus      // BIOS status
 );
 ///////////////////////////////////////////////////////////////////
-input           PciReset;
-input           Pwr_ok;
-input           Next_Bios;
-input           Active_Bios;
-input           SPI_PCH_CS0_N;
-output          Next_Bios_latch;
-output  [1:0]   BIOS_CS_N;
+input           ResetN;
+input           MainReset;
+input           Write;
+input           LpcClock;
+input           BiosCS;
+input           BIOS_SEL;
+input           SwapDisable;
+input   [1:0]   ForceSwap;
+input   [7:0]   RegAddress;
+input   [7:0]   DataWr;
+output  [1:0]   BIOS;
+output  [2:0]   BiosStatus;
 
 ///////////////////////////////////////////////////////////////////
-reg             Next_Bios_latch;
+wire            WriteReg;
+///////////////////////////////////////////////////////////////////
+reg             Start;
+reg             SetNext;
+reg     [1:0]   Edge;
+reg             Current_Bios;
+reg             Next_Bios;
+reg             Active_Bios;
 
 ///////////////////////////////////////////////////////////////////
-assign BIOS_CS_N[0] = Active_Bios ? 1'b1 : SPI_PCH_CS0_N;
-assign BIOS_CS_N[1] = Active_Bios ? SPI_PCH_CS0_N : 1'b1;
-//assign BIOS_CS_N[0] = SPI_PCH_CS0_N;
-//assign BIOS_CS_N[1] = 1'b1;
+assign BIOS[0] = Active_Bios ? 1'b1 : BiosCS;
+assign BIOS[1] = Active_Bios ? BiosCS : 1'b1;
+assign BiosStatus = {Current_Bios, Next_Bios, Active_Bios};
+
 ///////////////////////////////////////////////////////////////////
-always @ (PciReset) begin
-    if ((!PciReset) & (!Pwr_ok))
-        Next_Bios_latch <= 1'b0;
-    else if (PciReset)
-             Next_Bios_latch <= Next_Bios;
-         else
-             Next_Bios_latch <= Next_Bios_latch;
+assign WriteReg = Write & (RegAddress == 8'h04);
+///////////////////////////////////////////////////////////////////
+always @ (posedge LpcClock or negedge ResetN) begin
+    if(!ResetN) begin
+        Edge <= 2'h3;
+        Start <= 0;
+        SetNext <= 0;
+        Current_Bios <= 1'b0;
+        Next_Bios <= 1'b1;
+        Active_Bios <= 1'b0;
+    end else begin
+        Edge <= {Edge[0], MainReset | SwapDisable};
+        Start <= (Edge == 2'h1) & !SwapDisable | |ForceSwap;
+        SetNext <= Start;
+        Current_Bios <= (!BIOS_SEL | Start) ? Next_Bios : Current_Bios;
+        Next_Bios <= SetNext ? !Current_Bios : WriteReg ? DataWr[1] : Next_Bios;
+        Active_Bios <= SetNext ? Current_Bios : WriteReg ? DataWr[0] : Active_Bios;
+    end
 end
 
 endmodule

@@ -47,6 +47,7 @@ module LpcMux (
     LpcClock,       // 33 MHz Lpc (LPC Clock)
     AddrReg,        // Address of the accessed Register
     DataReg,        // Register data
+    BiosStatus,     // BIOS status
     DataRd          // Output Multiplexed Data
 );
 ///////////////////////////////////////////////////////////////////
@@ -54,6 +55,7 @@ input           PciReset;
 input           LpcClock;
 input   [7:0]   AddrReg;
 input   [7:0]   DataReg [31:0];
+input   [2:0]   BiosStatus;
 output  [7:0]   DataRd;
 ///////////////////////////////////////////////////////////////////
 int k;
@@ -61,9 +63,12 @@ int k;
 reg     [7:0]   Mux;
 reg     [7:0]   DataRd;
 ///////////////////////////////////////////////////////////////////
-always @ (AddrReg or DataReg[k]) begin
+always @ (AddrReg or BiosStatus or DataReg[k]) begin
     if (AddrReg < 32)
-        Mux = DataReg[AddrReg];
+        if (AddrReg == 8'h04)
+            Mux = {5'h00, BiosStatus};
+        else
+            Mux = DataReg[AddrReg];
     else
         Mux = 8'h00;
 end

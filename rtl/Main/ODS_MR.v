@@ -330,15 +330,27 @@ input           PCH_GPIO25;
 input           PCH_GPIO34;
 
 ////////////////////////////////////////////////////////////////////////////
+wire            CLK32768;
+wire            InitResetn;
+wire            MainResetN;
+
 wire            FM_PLD_DEBUG2;
 wire            FM_PLD_DEBUG3;
 wire            FM_PLD_DEBUG4;
 wire            FM_PLD_DEBUG5;
 
-wire            Next_Bios_latch;
-wire            Current_Bios;
-wire            Next_Bios;
-wire            Active_Bios;
+wire            Wr;
+wire    [7:0]   AddrReg;
+wire    [7:0]   DataWr;
+wire    [2:0]   BiosStatus;
+
+wire            Strobe1s;
+wire            Strobe488us;
+wire            Strobe1ms;
+wire            Strobe16ms;
+wire            Strobe125ms;
+wire            Strobe125msec;
+wire            Counter;
 
 ////////////////////////////////////////////////////////////////////////////
 /////         Module Instantiation
@@ -423,23 +435,87 @@ PwrSequence
                    .PsonFromPwrEvent(1'b1));                    // In, Integration to MstrSeq.sv is not validated yet.
 
 Lpc
-    u_Lpc (.PciReset(RST_PLTRST_N),             // PCI Reset
-           .LpcClock(LCLK_CPLD),                // 33 MHz Lpc (LPC Clock)
-           .LpcFrame(LPC_FRAME_N),              // LPC Interface: Frame
-           .LpcBus(LPC_LAD),                    // LPC Interface: Data Bus
-           .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
-           .Current_Bios(Current_Bios),         // Current BIOS number
-           .Next_Bios(Next_Bios),               // Next BIOS number after reset
-           .Active_Bios(Active_Bios));          // BIOS number of current active
+    u_Lpc (.PciReset(RST_PLTRST_N), // PCI Reset
+           .LpcClock(LCLK_CPLD),    // 33 MHz Lpc (LPC Clock)
+           .LpcFrame(LPC_FRAME_N),  // LPC Interface: Frame
+           .LpcBus(LPC_LAD),        // LPC Interface: Data Bus
+           .BiosStatus(BiosStatus), // Bios status setup value
+           .Wr(Wr),                 // LPC register wtite
+           .AddrReg(AddrReg),       // register address
+           .DataWr(DataWr));        // register write data
 
 BiosControl
-    u_BiosControl (.PciReset(RST_PLTRST_N),             // reset
-                   .Pwr_ok(PWRGD_PS_PWROK_3V3),         // power is available
-                   .Next_Bios(Next_Bios),               // Next BIOS number after reset
-                   .Active_Bios(Active_Bios),           // BIOS current active
-                   .SPI_PCH_CS0_N(SPI_PCH_CS0_N),       // BIOS chip select from PCH
-                   .Next_Bios_latch(Next_Bios_latch),   // Next BIOS number after reset
-                   .BIOS_CS_N(BIOS_CS_N));               // BIOS chip select
+    u_BiosControl (.ResetN(InitResetn),       // Power reset
+                   .MainReset(!MainResetN),    // Power or Controller ICH10R Reset
+                   .LpcClock(LCLK_CPLD),        // 33 MHz Lpc (Altera Clock)
+                   .Write(Wr),                  // Write Access to CPLD registor
+                   .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)
+                   .BIOS_SEL(BIOS_SEL),         // BIOS SELECT  - Bios Select Jumper (default "1")
+                   .SwapDisable(1'b0),          // Disable BIOS Swapping after Power Up
+                   .ForceSwap(2'b00),           // BiosWD Occurred, Force BIOS Swap while power restart
+                   .RegAddress(AddrReg),        // Address of the accessed Register
+                   .DataWr(DataWr),             // Data to be written to CPLD Register
+                   .BIOS(BIOS_CS_N),            // Chip Select to SPI Flash Memories
+                   .BiosStatus(BiosStatus));    // BIOS status
+
+HwResetGenerate
+    u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N),           // P3V3_AUX power on reset input
+                       .MCLKi(LCLK_CPLD),                  // 33MHz input
+                       .RSMRST_N(RST_RSMRST_N),
+                       .PLTRST_N(RST_PLTRST_N),
+                       .Reset1G(1'b1),
+                       .ResetOut_ox(1'b1),            // From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
+                       .FM_PS_EN(FM_PS_EN),
+
+                       .CLK32KHz(CLK32768),               // 32.768KHz output from a divider
+                       .InitResetn(InitResetn),             // 941us assert duration ( Low active ) from ( HARD_nRESETi & RSMRST_N ) rising edge
+                       .MainResetN(MainResetN),             // MainResetN = InitResetn & PLTRST_N
+                       .RST_CPU0_LVC3_N(),        // Pin M14, to Circuit for fault trigger event ( back to CPLD )
+                       .RST_PLTRST_BUF_N(),       // Pin C15, to 07 gate buffer, then drive SIO6779, U5(PCA9548) and U57(EPM1270)
+                       .RST_DLY_CPURST_LVC3(),    // Pin G12, drive ProcHot circuit, During Reset assertion period, only allow CPU
+                                                //           ProcHot to be monitored, After reset de-assertion, CPU ProcHot and IR PWM
+                                                //           Hot signal are monitored.
+                       .RST_PERST0_N(),           // Pin L16, to 07 gate buffer, then drive J8 and J9 ( both are PCIe x8 slots )
+                       .RST_BCM56842_N_R(),       // Pin F16, to reset BCM56842
+                       .RST_1G_N_R(),
+                       .SYS_RST_IN_SIO_N(),
+                       .RST_PCH_RSTBTN_N());
+
+Led7SegDecode
+    u_Led7SegDecode (.ResetN(InitResetn),
+                     .Mclk(CLK32768),
+                     .ALL_PWRGD(PWRGD_CPUPWRGD),
+                     .SystemOK(1'b1),
+                     .BiosFinished(BiosFinished),
+                     .BiosPostData(8'hFF),
+                     .Strobe1ms(Strobe1ms),
+                     .Strobe1s(Strobe1s),       // Single SlowClock Pulse @ 1 s
+                     .Strobe125ms(Strobe125ms),    // Single SlowClock Pulse @ 125 ms
+                     .BiosStatus(BiosStatus),
+                     .x7SegSel(x7SegSel),
+                     .x7SegVal(x7SegVal),
+
+                     .PowerEvtState(4'h0),
+                     .Led7En(LED7_digit),
+                     .Led7Leg(LED7_SEG),
+
+                     .FM_PLD_DEBUG2(FM_PLD_DEBUG2),  // FM_PLD_DEBUG[5:2] to MR_Bsp.Led7SegDecode; from PwrSequence module
+                     .FM_PLD_DEBUG3(FM_PLD_DEBUG3),
+                     .FM_PLD_DEBUG4(FM_PLD_DEBUG4),
+                     .FM_PLD_DEBUG5(FM_PLD_DEBUG5),
+                     .PORT80_DP(LED7_SEGDP));
+
+StrobeGen
+  u_StrobeGen (.ResetN(InitResetn),
+               .LpcClock(LCLK_CPLD),            // 33 MHz Lpc (Altera Clock)
+               .SlowClock(CLK32768),            // Oscillator Clock 32,768 Hz
+               .Strobe1s(Strobe1s),             // Single SlowClock Pulse @ 1 s
+               .Strobe488us(Strobe488us),       // Single SlowClock Pulse @ 488 us
+               .Strobe1ms(Strobe1ms),           // Single SlowClock Pulse @ 1 ms
+               .Strobe16ms(Strobe16ms),         // Single SlowClock Pulse @ 16 ms
+               .Strobe125ms(Strobe125ms),       // Single SlowClock Pulse @ 125 ms
+               .Strobe125msec(Strobe125msec),   // Single LpcClock  Pulse @ 125 ms
+               .Counter(Counter));              // 15 bit Free run Counter on Slow Clock
 
 // ----------------------------
 // Reset signals
@@ -449,8 +525,8 @@ assign RST_PLTRST_BUF_N = RST_PLTRST_N;
 assign RST_DLY_CPURST_LVC3 = RST_PLTRST_N;
 assign RST_PERST0_N = RST_PLTRST_N;
 
-assign BIOS_LED_N[0] = Current_Bios;
-assign BIOS_LED_N[1] = ~Current_Bios;
+assign BIOS_LED_N[0] = BiosStatus[2];
+assign BIOS_LED_N[1] = ~BiosStatus[2];
 assign FM_SYS_SIO_PWRBTN_N = PWR_BTN_IN_N; // PWR_BTN_IN_N is not controlled.
 assign RST_PCH_RSTBTN_N = SYS_RST_IN_N; // SYS_RST_IN_N is not controlled.
 assign RST_BCM56842_N_R = RST_PLTRST_N;
@@ -469,11 +545,8 @@ assign SYS_LEDG_N = 1'b1;
 assign SYS_LEDR_N = 1'b1;
 assign PSU_Normal_N = 2'b11;
 assign PSU_Fail_N = 2'b11;
-assign LED7_digit = 6'h3F;
-assign LED7_SEG = 7'h7F;
 assign FAN_LEDR_N = 1'b1;
 assign FAN_LEDG_N = 1'b1;
-assign LED7_SEGDP = 1'b1;
 assign DMEControl = 6'h00;
 assign SYS_RST_IN_SIO_N = 1'b1;
 assign CPLD_PCH_INT_N         =  1'b1;

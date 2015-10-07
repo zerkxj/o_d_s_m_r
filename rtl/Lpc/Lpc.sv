@@ -12,26 +12,23 @@ module Lpc (
     LpcClock,           // 33 MHz Lpc (LPC Clock)
     LpcFrame,           // LPC Interface: Frame
     LpcBus,             // LPC Interface: Data Bus
-    Next_Bios_latch,    // Next BIOS number after reset
-    Current_Bios,       // Current BIOS number
-    Next_Bios,          // Next BIOS number after reset
-    Active_Bios         // BIOS number of current active
+    BiosStatus,         // BIOS status
+    Wr,                 // LPC register wtite
+    AddrReg,            // register address
+    DataWr              // register write data
 );
 ///////////////////////////////////////////////////////////////////
 input           PciReset;
 input           LpcClock;
 input           LpcFrame;
 inout   [3:0]   LpcBus;
-input           Next_Bios_latch;
-output          Current_Bios;
-output          Next_Bios;
-output          Active_Bios;
+input   [2:0]   BiosStatus;
+output          Wr;
+output  [7:0]   AddrReg;
+output  [7:0]   DataWr;
 ///////////////////////////////////////////////////////////////////
 wire            Opcode;
-wire            Wr;
 wire            Rd;
-wire    [7:0]   AddrReg;
-wire    [7:0]   DataWr;
 wire    [10:6]  StateOut;
 wire    [7:0]   DataRd;
 wire    [7:0]   DataReg [31:0];
@@ -64,16 +61,14 @@ LpcReg
               .Addr(AddrReg),                       // register address
               .Wr(Wr),                              // write operation
               .DataWr(DataWr),                      // write data
-              .Next_Bios_latch(Next_Bios_latch),    // Next BIOS number after reset
-              .DataReg(DataReg),                    // Register data
-              .Current_Bios(Current_Bios),          // Current BIOS number
-              .Next_Bios(Next_Bios),                // Next BIOS number after reset
-              .Active_Bios(Active_Bios));           // Provide access to required BIOS chip
+              .BiosStatus(BiosStatus),                // BIOS status setup value
+              .DataReg(DataReg));                   // Register data
 
 LpcMux
-    u_LpcMux (.PciReset(PciReset),  // PCI Reset
-              .LpcClock(LpcClock),  // 33 MHz Lpc (LPC Clock)
-              .AddrReg(AddrReg),    // Address of the accessed Register
-              .DataReg(DataReg),    // Register data
-              .DataRd(DataRd));     // Output Multiplexed Data
+    u_LpcMux (.PciReset(PciReset),      // PCI Reset
+              .LpcClock(LpcClock),      // 33 MHz Lpc (LPC Clock)
+              .AddrReg(AddrReg),        // Address of the accessed Register
+              .DataReg(DataReg),        // Register data
+              .BiosStatus(BiosStatus),  // BIOS status
+              .DataRd(DataRd));         // Output Multiplexed Data
 endmodule

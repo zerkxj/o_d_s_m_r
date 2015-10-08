@@ -9,22 +9,15 @@
 //------------------------------------------------------------------------------
 // Macro define or include file
 //------------------------------------------------------------------------------
-`timescale 1 ns / 100 ps
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 
-`define Led7seg_En0     6'h01
-`define Led7seg_En1     6'h02
-`define Led7seg_En2     6'h04
-`define Led7seg_En3     6'h08
-`define Led7seg_En4     6'h10
-`define Led7seg_En5     6'h20
-`define Led7seg_DisAll  6'h00
-
-`ifndef SIMULATE_DESIGN
-`define LedDelayCnt 15'h4073
-`else
-`define LedDelayCnt 15'h000F
-`endif
+`define Led7seg_En0 6'h01
+`define Led7seg_En1 6'h02
+`define Led7seg_En2 6'h04
+`define Led7seg_En3 6'h08
+`define Led7seg_En4 6'h10
+`define Led7seg_En5 6'h20
+`define Led7seg_DisAll 6'h00
 
 //------------------------------------------------------------------------------
 // Module declaration
@@ -348,11 +341,11 @@ end
 always @ (posedge Mclk or negedge ResetN) begin
     if (!ResetN) begin
         Digit0 <= #TD 5'h0;
-        Digit1 <= #TD 5'h0;
-        Digit2 <= #TD 5'h0;
-        Digit3 <= #TD 5'h0;
-        Digit4 <= #TD 5'h0;
-        Digit5 <= #TD 5'h0;
+        Digit1 <= #TD 5'h1;
+        Digit2 <= #TD 5'h2;
+        Digit3 <= #TD 5'h3;
+        Digit4 <= #TD 5'h4;
+        Digit5 <= #TD 5'h5;
     end else if ({xStrobe1ms, bStrobe1ms} == 2'b10)
                  if (SystemOK) // 2'b11 = {ALL_PWRGD, SystemOK}
                      if (SoftCtrlEn) begin
@@ -363,12 +356,12 @@ always @ (posedge Mclk or negedge ResetN) begin
                          Digit4 <= #TD x7SegSel[2] ? {1'b0, x7SegVal[3:0]} : Digit4;
                          Digit5 <= #TD x7SegSel[2] ? {1'b0, x7SegVal[7:4]} : Digit5;
                      end else begin
-                         Digit0 <= #TD Digit0;
-                         Digit1 <= #TD Digit1;
-                         Digit2 <= #TD Digit2;
-                         Digit3 <= #TD Digit3;
-                         Digit4 <= #TD Digit4;
-                         Digit5 <= #TD Digit5;
+                         Digit0 <= #TD {1'b0, PowerEvtState};
+                         Digit1 <= #TD 5'h10;
+                         Digit2 <= #TD Flag ? Digit2x : 5'h10;
+                         Digit3 <= #TD Flag ? Digit3x : 5'h10;
+                         Digit4 <= #TD {1'b0, BiosPostData[3:0]};
+                         Digit5 <= #TD {1'b0, BiosPostData[7:4]};
                      end
                  else if (ALL_PWRGD) begin // ALL_PWRGD and not SystemOK (post system)
                           `ifndef DEBUG_PwrState
@@ -434,7 +427,7 @@ always @ (posedge Mclk or negedge ResetN) begin
                          Digit3x <= #TD 5'h0A; // 'A'
                      end
                      default: begin
-                         Digit2x <= #TD 5'h10;
+                         Digit2x <= #TD 5'h09;
                          Digit3x <= #TD 5'h10; // ' '
                      end
                  endcase
@@ -469,7 +462,7 @@ end
 always @ (posedge Mclk or negedge ResetN) begin
     if (!ResetN)
         Flag <= 1'b0;
-    else if (BiosFinished )
+    else if (BiosFinished)
              Flag <= #TD 1'b1;
          else if (Modulate != 2'h2)
                   Flag <= #TD 1'b1;

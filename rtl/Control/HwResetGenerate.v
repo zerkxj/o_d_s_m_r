@@ -10,37 +10,39 @@
 //------------------------------------------------------------------------------
 // Macro define or include file
 //------------------------------------------------------------------------------
+`include "../Verilog/Includes/DefineODSTextMacro.v"
+
 `ifndef SIMULATE_DESIGN
-  `define CLK33M_32K_DIV        16'h01F7
+    `define CLK33M_32K_DIV 16'h01F7
 `else
-  `define CLK33M_32K_DIV        16'h0001
+    `define CLK33M_32K_DIV 16'h0001
 `endif
 
 //------------------------------------------------------------------------------
 // Module declaration
 //------------------------------------------------------------------------------
 module HwResetGenerate (
-    HARD_nRESETi,           // P3V3_AUX power on reset input
-    MCLKi,                  // 33MHz input
-    RSMRST_N,
-    PLTRST_N,
-    Reset1G,
-    ResetOut_ox,            // From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
-    FM_PS_EN,
+    HARD_nRESETi,           // In, P3V3_AUX power on reset input
+    MCLKi,                  // In, 33MHz input
+    RSMRST_N,               // In,
+    PLTRST_N,               // In,
+    Reset1G,                // In,
+    ResetOut_ox,            // In, From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
+    FM_PS_EN,               // In,
 
-    CLK32KHz,               // 32.768KHz output from a divider
-    InitResetn,             // 941us assert duration ( Low active ) from ( HARD_nRESETi & RSMRST_N ) rising edge
-    MainResetN,             // MainResetN = InitResetn & PLTRST_N
-    RST_CPU0_LVC3_N,        // Pin M14, to Circuit for fault trigger event ( back to CPLD )
-    RST_PLTRST_BUF_N,       // Pin C15, to 07 gate buffer, then drive SIO6779, U5(PCA9548) and U57(EPM1270)
-    RST_DLY_CPURST_LVC3,    // Pin G12, drive ProcHot circuit, During Reset assertion period, only allow CPU
+    CLK32KHz,               // Out, 32.768KHz output from a divider
+    InitResetn,             // Out, 941us assert duration ( Low active ) from ( HARD_nRESETi & RSMRST_N ) rising edge
+    MainResetN,             // Out, MainResetN = InitResetn & PLTRST_N
+    RST_CPU0_LVC3_N,        // Out, Pin M14, to Circuit for fault trigger event ( back to CPLD )
+    RST_PLTRST_BUF_N,       // Out, Pin C15, to 07 gate buffer, then drive SIO6779, U5(PCA9548) and U57(EPM1270)
+    RST_DLY_CPURST_LVC3,    // Out, Pin G12, drive ProcHot circuit, During Reset assertion period, only allow CPU
                             //           ProcHot to be monitored, After reset de-assertion, CPU ProcHot and IR PWM
                             //           Hot signal are monitored.
-    RST_PERST0_N,           // Pin L16, to 07 gate buffer, then drive J8 and J9 ( both are PCIe x8 slots )
-    RST_BCM56842_N_R,       // Pin F16, to reset BCM56842
-    RST_1G_N_R,
-    SYS_RST_IN_SIO_N,
-    RST_PCH_RSTBTN_N
+    RST_PERST0_N,           // Out, Pin L16, to 07 gate buffer, then drive J8 and J9 ( both are PCIe x8 slots )
+    RST_BCM56842_N_R,       // Out, Pin F16, to reset BCM56842
+    RST_1G_N_R,             // Out,
+    SYS_RST_IN_SIO_N,       // Out,
+    RST_PCH_RSTBTN_N        // Out,
 );
 
 //------------------------------------------------------------------------------
@@ -225,8 +227,10 @@ end
 always @ (posedge CLK32KHz or negedge TwoHwSignalAND) begin
     if (!TwoHwSignalAND)
         initCnt <= #TD 5'h00;
-    else
-        initCnt <= #TD initCnt + 1;
+    else if (!(&initCnt))
+             initCnt <= #TD initCnt + 5'd1;
+         else
+             initCnt <= #TD initCnt;
 end
 
 //----------------------------------------------------------------------

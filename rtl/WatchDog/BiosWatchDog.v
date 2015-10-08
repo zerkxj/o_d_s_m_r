@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////
+//******************************************************************************
 // File name      : BiosWatchDog.v
 // Module name    : BiosWatchDog
 // Company        : Radware
@@ -10,94 +10,237 @@
 // Last modified  : 08.02.2011
 // Version        : 1.0
 // Description    : This module controls BIOS Watch Dog
-// Hierarchy Up	  : Lpc
+// Hierarchy Up      : Lpc
 // Hierarchy Down : ---
-// Card Release	  : 1.0
-///////////////////////////////////////////////////////////////////
-`timescale 1 ns / 100 ps
+// Card Release      : 1.0
+//******************************************************************************
+
+//------------------------------------------------------------------------------
+// Macro define or include file
+//------------------------------------------------------------------------------
 `include "../Verilog/Includes/DefineODSTextMacro.v"
 
-module BiosWatchDog(
-	Reset,					// Generated PowerUp Reset
-	SlowClock,				// Oscillator Clock 32,768 Hz
-	LpcClock,				// 33 MHz Lpc (Altera Clock)
-	MainReset,				// Power or Controller ICH10R Reset
-    PS_ONn,
-    DPx,
-	Strobe125msec,			// Single LpcClock  Pulse @ 125 ms
-	WriteBiosWD,			// CPU (BIOS) writes to BIOS WD Register (#1)
-	BiosRegister,			// Bios Watch Dog Control Register
-	BiosFinished,			// Bios Has been finished
-	BiosPowerOff,			// BiosWD Occurred, Force Power Off
-	ForceSwap				// BiosWD Occurred, Force BIOS Swap while power restart
-	);
-///////////////////////////////////////////////////////////////////
-input			Reset, SlowClock;
-input			LpcClock, MainReset, Strobe125msec, WriteBiosWD;
+
+//------------------------------------------------------------------------------
+// Module declaration
+//------------------------------------------------------------------------------
+module BiosWatchDog (
+    Reset,          // In, Generated PowerUp Reset
+    SlowClock,      // In, Oscillator Clock 32,768 Hz
+    LpcClock,       // In, 33 MHz Lpc (Altera Clock)
+    MainReset,      // In, Power or Controller ICH10R Reset
+    PS_ONn,         // In,
+    DPx,            // Out,
+    Strobe125msec,  // In, Single LpcClock  Pulse @ 125 ms
+    WriteBiosWD,    // In, CPU (BIOS) writes to BIOS WD Register (#1)
+    BiosRegister,   // In, Bios Watch Dog Control Register
+    BiosFinished,   // Out, Bios Has been finished
+    BiosPowerOff,   // Out, BiosWD Occurred, Force Power Off
+    ForceSwap       // Out, BiosWD Occurred, Force BIOS Swap while power restart
+);
+//------------------------------------------------------------------------------
+// Parameter declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// User defined parameter
+//--------------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Standard parameter
+//--------------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Local parameter
+//--------------------------------------------------------------------------
+// time delay, flip-flop output assignment delay for simulation waveform trace
+localparam TD = 1;
+
+//------------------------------------------------------------------------------
+// Variable declaration
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Input/Output declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Input declaration
+//--------------------------------------------------------------------------
+input           Reset;
+input           SlowClock;
+input           LpcClock;
+input           MainReset;
+input           Strobe125msec;
+input           WriteBiosWD;
 input           PS_ONn;
-input	[7:0]	BiosRegister;
-output	[1:0]	DPx;
-output			BiosFinished, BiosPowerOff, ForceSwap;
-///////////////////////////////////////////////////////////////////
-reg		[9:0]	BiosTimer;
-reg		[5:0]	BiosTimer4sec;
-reg				BiosPowerOff, BiosWatchDogReset, Edge, ForceSwap;
-reg				BiosFinished, DisableBiosWD, DisableTimer, Freeze;
-wire    [1:0]   DPx;
+input   [7:0]   BiosRegister;
 
-assign DPx[1] = (DisableTimer) ? 1'b0 : (0 == BiosTimer) ? 1'b0 : 1'b1;
-assign DPx[0] = (Freeze) ? 1'b0 : (0 == BiosTimer4sec) ? 1'b0 : 1'b1;
-///////////////////////////////////////////////////////////////////
-	initial
-	begin
-        BiosTimer			= 0;
-        BiosTimer4sec		= 0;
-        BiosPowerOff		= 0;
-        BiosWatchDogReset	= 0;
-        Edge				= 0;
-	end
+//--------------------------------------------------------------------------
+// Output declaration
+//--------------------------------------------------------------------------
+output  [1:0]   DPx;
+output          BiosFinished;
+output          BiosPowerOff;
+output          ForceSwap;
 
-always	@(posedge LpcClock)
-  if(!MainReset && `PwrSW_Off == PS_ONn) 
-    begin
-      BiosTimer			<= 0;
-      BiosTimer4sec		<= 0;
-      BiosWatchDogReset	<= 0;
-      Edge				<= 0;
-      ForceSwap			<= 0;
-      DisableBiosWD		<= 0;
-      DisableTimer		<= 0;
-      BiosFinished		<= 0;
-      Freeze			<= 0;
+//------------------------------------------------------------------------------
+// Signal declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Wire declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational, module connection
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Reg declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Sequential
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+reg             BiosFinished;
+reg             BiosPowerOff;
+reg             ForceSwap;
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+reg     [9:0]   BiosTimer;
+reg     [5:0]   BiosTimer4sec;
+reg             BiosWatchDogReset;
+reg             Edge;
+reg             DisableBiosWD;
+reg             DisableTimer;
+reg             Freeze;
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Task/Function description and included task/function description
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Main code
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Combinational circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Sequential circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+always @ (posedge LpcClock or negedge MainReset) begin
+    if(!MainReset)
+        if (!PS_ONn) begin
+            BiosFinished <= #TD 1'b0;
+            ForceSwap <= #TD 1'b0;
+        end else begin
+            BiosFinished <= #TD BiosFinished;
+            ForceSwap <= #TD ForceSwap;
+        end
+    else begin
+        ForceSwap <= #TD BiosWatchDogReset & !Edge;
+        BiosFinished <= #TD (BiosRegister == 8'hFF) | BiosFinished;
     end
-  else
-    begin
-      BiosTimer			<= DisableTimer ? BiosTimer :
-      						Strobe125msec ? BiosTimer + 1'b1 : BiosTimer;
-      BiosTimer4sec		<= Freeze ? BiosTimer4sec : (WriteBiosWD | DisableBiosWD) ? 6'h0 :
-      						Strobe125msec ? BiosTimer4sec + 1'b1 : BiosTimer4sec;
-      BiosWatchDogReset	<= BiosTimer[9] | BiosTimer4sec[5];
-      //BiosWatchDogReset	<= BiosTimer[9];
-      Edge				<= BiosWatchDogReset;
-      ForceSwap			<= BiosWatchDogReset & !Edge;
-	  ///////////////////////////////////////////////////////
-	  
-       DisableBiosWD		<= ((BiosRegister == 8'h55) | (BiosRegister == 8'h29)) & !BiosFinished; 	  
-	   
-       DisableTimer		<= (BiosRegister == 8'h29) | BiosFinished | BiosWatchDogReset;	  
-	  
-       BiosFinished		<= (BiosRegister == 8'hFF) |  BiosFinished;
-	  
-	  //////////////////////////////////////////////////////////
-	  
-      //DisableTimer		<= (BiosRegister == 8'h28) | BiosFinished | BiosWatchDogReset;
-      //BiosFinished		<= (BiosRegister == 8'hFE) |  BiosFinished;
-      Freeze			<= BiosFinished | BiosWatchDogReset;
-    end
-///////////////////////////////////////////////////////////////////
+end
+
 always @ (posedge SlowClock or negedge Reset)
-  if(!Reset)		BiosPowerOff		<= 0; 
-   else				BiosPowerOff		<= BiosWatchDogReset;   
-///////////////////////////////////////////////////////////////////
+    if(!Reset)
+        BiosPowerOff <= #TD 1'b0;
+    else
+        BiosPowerOff <= #TD BiosWatchDogReset;
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+always @ (posedge LpcClock or negedge MainReset) begin
+    if(!MainReset)
+        if (!PS_ONn) begin
+            BiosTimer <= #TD 10'd0;
+            BiosTimer4sec <= #TD 6'd0;
+            BiosWatchDogReset <= #TD 0;
+            Edge <= #TD 0;
+            DisableBiosWD <= #TD 0;
+            DisableTimer <= #TD 0;
+            Freeze <= #TD 0;
+        end else begin
+            BiosTimer <= #TD BiosTimer;
+            BiosTimer4sec <= #TD BiosTimer4sec;
+            BiosWatchDogReset <= #TD BiosWatchDogReset;
+            Edge <= #TD Edge;
+            DisableBiosWD <= #TD DisableBiosWD;
+            DisableTimer <= #TD DisableTimer;
+            Freeze <= #TD Freeze;
+        end
+    else begin
+        BiosTimer <= #TD DisableTimer ? BiosTimer :
+                         Strobe125msec ? (BiosTimer + 10'd1) : BiosTimer;
+        BiosTimer4sec <= #TD Freeze ? BiosTimer4sec :
+                             (WriteBiosWD | DisableBiosWD) ? 6'h0 :
+                                 Strobe125msec ? (BiosTimer4sec + 6'd1) : BiosTimer4sec;
+        BiosWatchDogReset <= #TD BiosTimer[9] | BiosTimer4sec[5];
+        Edge <= #TD BiosWatchDogReset;
+        DisableBiosWD <= #TD ((BiosRegister == 8'h55) | (BiosRegister == 8'h29)) & (!BiosFinished);
+        DisableTimer <= #TD (BiosRegister == 8'h29) | BiosFinished | BiosWatchDogReset;
+        Freeze <= #TD BiosFinished | BiosWatchDogReset;
+    end
+end
+
+
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Module instantiation
+//--------------------------------------------------------------------------
+// None
+
+
 endmodule
-///////////////////////////////////////////////////////////////////

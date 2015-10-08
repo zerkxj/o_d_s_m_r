@@ -9,31 +9,32 @@
 // Status           : Under design
 // Last modified by : Carlos Chen
 // Last modified    : 07.10.2015
-// Version          : 1.0                            
+// Version          : 1.0
 // Description      : Generates cyclic strobe signals
 // Hierarchy Up     : ODS_MR
 // Hierarchy Down   : -
 // Card Release     : 1.0
 //******************************************************************************
+
 //------------------------------------------------------------------------------
 // Macro define or include file
 //------------------------------------------------------------------------------
-`timescale 1ps/1ps
+// None
 
 //------------------------------------------------------------------------------
 // Module declaration
 //------------------------------------------------------------------------------
 module StrobeGen (
-    ResetN,
-    LpcClock,       // 33 MHz Lpc (Altera Clock)
-    SlowClock,      // Oscillator Clock 32,768 Hz
-    Strobe1s,       // Single SlowClock Pulse @ 1 s
-    Strobe488us,    // Single SlowClock Pulse @ 488 us
-    Strobe1ms,      // Single SlowClock Pulse @ 1 ms
-    Strobe16ms,     // Single SlowClock Pulse @ 16 ms
-    Strobe125ms,    // Single SlowClock Pulse @ 125 ms
-    Strobe125msec,  // Single LpcClock  Pulse @ 125 ms
-    Counter         // 15 bit Free run Counter on Slow Clock
+    ResetN,         // In,
+    LpcClock,       // In, 33 MHz Lpc (Altera Clock)
+    SlowClock,      // In, Oscillator Clock 32,768 Hz
+    Strobe1s,       // Out, Single SlowClock Pulse @ 1 s
+    Strobe488us,    // Out, Single SlowClock Pulse @ 488 us
+    Strobe1ms,      // Out, Single SlowClock Pulse @ 1 ms
+    Strobe16ms,     // Out, Single SlowClock Pulse @ 16 ms
+    Strobe125ms,    // Out, Single SlowClock Pulse @ 125 ms
+    Strobe125msec,  // Out, Single LpcClock  Pulse @ 125 ms
+    Counter         // Out, 15 bit Free run Counter on Slow Clock
 );
 
 //------------------------------------------------------------------------------

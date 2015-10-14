@@ -1,81 +1,213 @@
-//////////////////////////////////////////////////////////////////////////////
+//******************************************************************************
 // File name        : ClockSource.v
 // Module name      : ClockSource
-// Description      : This module makes a 33MHz clock source for other modules               
+// Description      : This module makes a 33MHz clock source for other modules
+//                    When LPC clock source, LCLK_CPLD, is not ready, Mclkx will
+//                    be assigned to OSC clock , MCLK_FPGA. Once LCLK_CPLD is
+//                    ready , Mclkx will be assigned to LCLK_CPLD for clock
+//                    synchronization concern.
 // Hierarchy Up     : ODS_MR
 // Hierarchy Down   : ---
-//////////////////////////////////////////////////////////////////////////////  
-//- include "../Verilog/Includes/DefineODSTextMacro.v"
-//////////////////////////////////////////////////////////////////////////////
+//******************************************************************************
 
- module ClockSource (
-        HARD_nRESETi ,      
-		LCLK_CPLD ,        // 33MHz clock source from LPC
-		MCLK_FPGA ,        // 33MHz clock source from OSC
-		Mclkx              // Clock Source output          
-	);
-///////////////////////////////////////////////////////////////////
-//   When LPC clock source , LCLK_CPLD , is not ready , Mclkx will be assigned to OSC clock , MCLK_FPGA .
-//   Once LCLK_CPLD is ready , Mclkx will be assigned to LCLK_CPLD for clock synchronization concern.
-//   
+//------------------------------------------------------------------------------
+// Macro define or include file
+//------------------------------------------------------------------------------
+// None
 
-input   HARD_nRESETi;
-input   LCLK_CPLD;
-input   MCLK_FPGA;
+//------------------------------------------------------------------------------
+// Module declaration
+//------------------------------------------------------------------------------
+module ClockSource (
+    HARD_nRESETi,   // In,
+    LCLK_CPLD,      // In, 33MHz clock source from LPC
+    MCLK_FPGA,      // In, 33MHz clock source from OSC
+    Mclkx           // Out, Clock Source output
+);
 
-output  Mclkx ;
+//------------------------------------------------------------------------------
+// Parameter declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// User defined parameter
+//--------------------------------------------------------------------------
+// None
 
+//--------------------------------------------------------------------------
+// Standard parameter
+//--------------------------------------------------------------------------
+// None
 
-reg     [3:0]       LpcClkCnt_0;
-reg     [3:0]       LpcClkCnt_1;
-reg     [3:0]       LpcClkCnt_2;
-reg     [3:0]       ChkClkCnt;
-reg                 bLpcClkOff;
+//--------------------------------------------------------------------------
+// Local parameter
+//--------------------------------------------------------------------------
+// time delay, flip-flop output assignment delay for simulation waveform trace
+localparam TD = 1;
 
-    
-	assign Mclkx 		= bLpcClkOff ? MCLK_FPGA : LCLK_CPLD ; // - Mclk : lclk; Frank 06092015    
-	
-    always @(negedge HARD_nRESETi or posedge LCLK_CPLD )  
-    begin
-		if(1'b0 == HARD_nRESETi)
-            LpcClkCnt_0	= 4'h0;
-        else
-            LpcClkCnt_0 = LpcClkCnt_0 + 1;
-    end
+//------------------------------------------------------------------------------
+// Variable declaration
+//------------------------------------------------------------------------------
+// None
 
-    always @(negedge HARD_nRESETi or posedge MCLK_FPGA ) 
-    begin
-		if(1'b0 == HARD_nRESETi)
-            LpcClkCnt_1	= 4'h0;
-        else
-            LpcClkCnt_1 = LpcClkCnt_0;
-    end
+//------------------------------------------------------------------------------
+// Input/Output declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Input declaration
+//--------------------------------------------------------------------------
+input           HARD_nRESETi;
+input           LCLK_CPLD;
+input           MCLK_FPGA;
 
-    always @(negedge HARD_nRESETi or posedge MCLK_FPGA )  
-    begin
-		if(1'b0 == HARD_nRESETi)
-        begin
-			bLpcClkOff = `FALSE;
-            ChkClkCnt  = 4'h0;
-            LpcClkCnt_2= 0;
-        end
-        else
-        begin
-            if(LpcClkCnt_2 != LpcClkCnt_1)
-            begin
-            	LpcClkCnt_2 = LpcClkCnt_1;
-            	//if(4'h0 != ChkClkCnt) ChkClkCnt = ChkClkCnt - 1;
-	            ChkClkCnt   = 4'h0;
-				bLpcClkOff	= `FALSE;
-            end
-            else
-            begin
-            	if(4'hF == ChkClkCnt)
-					bLpcClkOff	= `TRUE;
-                else
-					ChkClkCnt = ChkClkCnt + 1;
-            end
-        end
-    end
-	
+//--------------------------------------------------------------------------
+// Output declaration
+//--------------------------------------------------------------------------
+output          Mclkx;
+
+//------------------------------------------------------------------------------
+// Signal declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Wire declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational, module connection
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Reg declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Sequential
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+reg     [3:0]   LpcClkCnt_0;
+reg     [3:0]   LpcClkCnt_1;
+reg     [3:0]   LpcClkCnt_2;
+reg     [3:0]   ChkClkCnt;
+reg             bLpcClkOff;
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Task/Function description and included task/function description
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Main code
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Combinational circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+assign Mclkx = bLpcClkOff ? MCLK_FPGA : LCLK_CPLD;
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Sequential circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+always @ (negedge HARD_nRESETi or posedge LCLK_CPLD) begin
+    if(!HARD_nRESETi)
+        LpcClkCnt_0 <= #TD 4'h0;
+    else
+        LpcClkCnt_0 <= #TD LpcClkCnt_0 + 4'd1;
+end
+
+always @ (negedge HARD_nRESETi or posedge MCLK_FPGA) begin
+    if(!HARD_nRESETi)
+        LpcClkCnt_1 <= #TD 4'h0;
+    else
+        LpcClkCnt_1 <= #TD LpcClkCnt_0;
+end
+
+always @ (negedge HARD_nRESETi or posedge MCLK_FPGA) begin
+    if(!HARD_nRESETi)
+        LpcClkCnt_2 <= #TD 4'h0;
+    else if(LpcClkCnt_2 != LpcClkCnt_1)
+             LpcClkCnt_2 <= #TD LpcClkCnt_1;
+         else
+             LpcClkCnt_2 <= #TD LpcClkCnt_2;
+end
+
+always @ (negedge HARD_nRESETi or posedge MCLK_FPGA) begin
+    if(!HARD_nRESETi)
+        ChkClkCnt <= #TD 4'h0;
+    else if(LpcClkCnt_2 != LpcClkCnt_1)
+             ChkClkCnt <= #TD 4'h0;
+         else if(&ChkClkCnt)
+                  ChkClkCnt <= #TD ChkClkCnt;
+              else
+                  ChkClkCnt <= #TD ChkClkCnt + 4'd1;
+end
+
+always @ (negedge HARD_nRESETi or posedge MCLK_FPGA) begin
+    if(!HARD_nRESETi)
+        bLpcClkOff <= #TD `FALSE;
+    else if(LpcClkCnt_2 != LpcClkCnt_1)
+             bLpcClkOff <= #TD `FALSE;
+         else if(&ChkClkCnt)
+                  bLpcClkOff <= #TD `TRUE;
+              else
+                  bLpcClkOff <= #TD bLpcClkOff;
+end
+
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Module instantiation
+//--------------------------------------------------------------------------
+// None
+
 endmodule // ClockSource

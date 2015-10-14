@@ -386,6 +386,8 @@ wire            WriteBiosWD;
 wire    [7:0]   BiosRegister;
 wire    [7:0]   BiosPostData;
 
+wire            CLK33M;
+
 wire            Strobe1s;
 wire            Strobe488us;
 wire            Strobe1ms;
@@ -598,7 +600,7 @@ PwrSequence
 
 Lpc
     u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
-           .LpcClock(LCLK_CPLD),            // In, 33 MHz Lpc (LPC Clock)
+           .LpcClock(CLK33M),            // In, 33 MHz Lpc (LPC Clock)
            .LpcFrame(LPC_FRAME_N),          // In, LPC Interface: Frame
            .LpcBus(LPC_LAD),                // In, LPC Interface: Data Bus
            .BiosStatus(BiosStatus),         // In, Bios status setup value
@@ -612,10 +614,16 @@ Lpc
            .BiosRegister(BiosRegister),     // Out, BIOS watch dog register
            .BiosPostData(BiosPostData));    // Out, 80 port data
 
+ClockSource
+    u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
+                   .LCLK_CPLD(LCLK_CPLD),       // In, 33MHz clock source from LPC
+                   .MCLK_FPGA(MCLK_FPGA),       // In, 33MHz clock source from OSC
+                   .Mclkx(CLK33M));             // Out, Clock Source output
+
 BiosControl
     u_BiosControl (.ResetN(InitResetn),       // Power reset
                    .MainReset(!MainResetN),    // Power or Controller ICH10R Reset
-                   .LpcClock(LCLK_CPLD),        // 33 MHz Lpc (Altera Clock)
+                   .LpcClock(CLK33M),        // 33 MHz Lpc (Altera Clock)
                    .Write(Wr),                  // Write Access to CPLD registor
                    .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)
                    .BIOS_SEL(BIOS_SEL),         // BIOS SELECT  - Bios Select Jumper (default "1")
@@ -628,7 +636,7 @@ BiosControl
 
 HwResetGenerate
     u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N), // In, P3V3_AUX power on reset input
-                       .MCLKi(LCLK_CPLD),           // In, 33MHz input
+                       .MCLKi(CLK33M),           // In, 33MHz input
                        .RSMRST_N(RST_RSMRST_N),     // In,
                        .PLTRST_N(RST_PLTRST_N),     // In,
                        .Reset1G(1'b1),              // In,
@@ -675,7 +683,7 @@ Led7SegDecode
 
 StrobeGen
   u_StrobeGen (.ResetN(InitResetn),             // In,
-               .LpcClock(LCLK_CPLD),            // In, 33 MHz Lpc (Altera Clock)
+               .LpcClock(CLK33M),               // In, 33 MHz Lpc (Altera Clock)
                .SlowClock(CLK32768),            // In, Oscillator Clock 32,768 Hz
                .Strobe1s(Strobe1s),             // Out, Single SlowClock Pulse @ 1 s
                .Strobe488us(Strobe488us),       // Out, Single SlowClock Pulse @ 488 us
@@ -688,7 +696,7 @@ StrobeGen
 BiosWatchDog
   u_BiosWatchDog (.Reset(InitResetn),               // In, Generated PowerUp Reset
                   .SlowClock(CLK32768),             // In, Oscillator Clock 32,768 Hz
-                  .LpcClock(LCLK_CPLD),             // In, 33 MHz Lpc (Altera Clock)
+                  .LpcClock(CLK33M),                // In, 33 MHz Lpc (Altera Clock)
                   .MainReset(MainResetN),           // In, Power or Controller ICH10R Reset
                   .PS_ONn(FM_PS_EN),                // In,
                   .DPx(),                           // Out,

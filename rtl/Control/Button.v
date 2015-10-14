@@ -1,9 +1,18 @@
 //******************************************************************************
-// File name        : PwrBtnControl.v
-// Module name      : PwrBtnControl
-// Description      : This module control Power Btuuon timing
-// Hierarchy Up     : ODS_MR
-// Hierarchy Down   : ---
+// File name        : Button.v
+// Module name      : Button
+// Company          : Caswell
+// Project name     : ODS-MR
+// Card name        : Yarkon
+// Designer         : Fedor Haikin
+// Creation Date    : 08.02.2011
+// Status           : Under design
+// Last modified    : 10.13.2015
+// Version          : 1.0
+// Description      : This module output debounce button input, interrupt...
+// Hierarchy Up     : ODSLS
+// Hierarchy Down   :
+// Card Release     : 1.0
 //******************************************************************************
 
 //------------------------------------------------------------------------------
@@ -14,19 +23,16 @@
 //------------------------------------------------------------------------------
 // Module declaration
 //------------------------------------------------------------------------------
-module  PwrBtnControl (
-    InitResetN,         // In,
-    Strobe125ms,        // In,
-    PWR_BTN_IN_N,       // In,
-    PWRGD_PS_PWROK_3V3, // In,
-    FM_PS_EN,           // In,
-    PowerEvtState,      // In,
-    PowerButtonOut_ox,  // In,
-    PowerbuttonEvtOut,  // In,
-    RstBiosFlg,         // Out,
-    FM_SYS_SIO_PWRBTN_N // Out
+module Button(
+    MainReset,      // In, Power or Controller ICH10R Reset
+    SlowClock,      // In, Oscillator Clock 32,768 Hz
+    Strobe16ms,     // In, Single SlowClock Pulse @ 16 ms
+    Strobe125ms,    // In, Single SlowClock Pulse @ 125 ms
+    ButtonIn,       // In, Button Input
+    Interrupt,      // Out, Single SlowClock Pulse 1s after the button pushed
+    StrobeOut,      // Out, Active Wide Strobe 4s after the button pushed
+    Release         // Out, Single SlowClock Pulse after the button released
 );
-
 
 //------------------------------------------------------------------------------
 // Parameter declaration
@@ -34,7 +40,7 @@ module  PwrBtnControl (
 //--------------------------------------------------------------------------
 // User defined parameter
 //--------------------------------------------------------------------------
-// None
+parameter RST = 0;
 
 //--------------------------------------------------------------------------
 // Standard parameter
@@ -58,20 +64,18 @@ localparam TD = 1;
 //--------------------------------------------------------------------------
 // Input declaration
 //--------------------------------------------------------------------------
-input           InitResetN;
+input           MainReset;
+input           SlowClock;
+input           Strobe16ms;
 input           Strobe125ms;
-input           PWR_BTN_IN_N;
-input           PWRGD_PS_PWROK_3V3;
-input           FM_PS_EN;
-input   [3:0]   PowerEvtState;
-input           PowerButtonOut_ox;  // From MR_Bsp.ButtonControl.Button::StrobeOut ( in ButtonControl.v file )
-input           PowerbuttonEvtOut;  // From PwrEvent
+input           ButtonIn;
 
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
-output          RstBiosFlg; // To MR_Bsp.BiosControl
-output          FM_SYS_SIO_PWRBTN_N; // Output to SIO
+output          Interrupt;
+output          Release;
+output          StrobeOut;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -82,7 +86,7 @@ output          FM_SYS_SIO_PWRBTN_N; // Output to SIO
 //----------------------------------------------------------------------
 // Combinational, module connection
 //----------------------------------------------------------------------
-// None
+wire            Widest;
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -111,12 +115,16 @@ output          FM_SYS_SIO_PWRBTN_N; // Output to SIO
 //------------------------------------------------------------------
 // Output
 //------------------------------------------------------------------
-// None
+reg             Interrupt;
+reg             Release;
 
 //------------------------------------------------------------------
 // Internal signal
 //------------------------------------------------------------------
-reg     [9:0]   PowerButtonInBuf;
+reg     [2:0]   Debounce; // Debounce shift register
+reg             Status;
+reg             Strobe;
+reg     [5:0]   Timer;
 
 //------------------------------------------------------------------
 // FSM
@@ -137,15 +145,12 @@ reg     [9:0]   PowerButtonInBuf;
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-assign RstBiosFlg = (PWRGD_PS_PWROK_3V3) ? 1'b0 :
-                        ((PowerEvtState == `Event_PowerStandBy) && (~PWR_BTN_IN_N)) ? 1'b1 :
-                            ((~PowerButtonInBuf[9]) && (FM_PS_EN == `PwrSW_Off)) ? 1'b1 : 1'b0;
-assign FM_SYS_SIO_PWRBTN_N = PowerButtonOut_ox & PowerbuttonEvtOut;
+assign StrobeOut = RST ? Strobe: Status;
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-// None
+assign Widest = Timer[5];
 
 //----------------------------------------------------------------------
 // FSM
@@ -158,18 +163,51 @@ assign FM_SYS_SIO_PWRBTN_N = PowerButtonOut_ox & PowerbuttonEvtOut;
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-// None
+always @ (posedge SlowClock or negedge MainReset) begin
+    if(!MainReset) begin
+        Interrupt <= #TD 1'b0;
+        Release <= #TD 1'b0;
+    end else begin
+               Interrupt <= #TD (Timer == 6'h7) & Strobe125ms;
+               Release <= #TD (Debounce == 3'h7) & (!Status) & Strobe16ms;
+             end
+end
+
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-always @ (posedge Strobe125ms or negedge InitResetN) begin
-    if(!InitResetN)
-        PowerButtonInBuf <= #TD 10'd0;
-    else
-        PowerButtonInBuf <= #TD {PowerButtonInBuf[8:0], PWR_BTN_IN_N };
+always @ (posedge SlowClock or negedge MainReset) begin
+    if(!MainReset) begin
+        Debounce <= #TD 3'h7;
+        Status <= #TD 1'b1;
+    end else if(Strobe16ms) begin
+                  Debounce <= #TD {Debounce[1:0], ButtonIn};
+                  Status <= #TD (Debounce == 3'h7) | Status & (Debounce != 3'h0);
+              end else begin
+                  Debounce <= #TD Debounce;
+                  Status <= #TD Status;
+              end
 end
 
+always @ (posedge SlowClock or negedge MainReset) begin
+    if(!MainReset)
+        Strobe <= #TD 1'b1;
+    else
+        Strobe <= #TD (Timer != 6'h1F);
+end
+
+always @ (posedge SlowClock or negedge MainReset) begin
+    if(!MainReset)
+        Timer <= #TD 6'd0;
+    else if(Strobe125ms)
+           if(Status)
+             Timer <= #TD 6'h0;
+           else
+             Timer <= #TD Widest ? Timer: (Timer + 1'b1);
+         else
+             Timer <= #TD Timer;
+end
 //----------------------------------------------------------------------
 // FSM
 //----------------------------------------------------------------------
@@ -180,4 +218,4 @@ end
 //--------------------------------------------------------------------------
 // None
 
-endmodule // PwrBtnControl
+endmodule

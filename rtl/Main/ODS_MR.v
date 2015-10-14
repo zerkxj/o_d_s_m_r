@@ -396,9 +396,23 @@ wire            Counter;
 wire    [4:0]   x7SegSel;
 wire    [7:0]   x7SegVal;
 
+wire    [3:0]   PowerEvtState;
+
 wire            BiosFinished;
 wire            BiosPowerOff;
 wire            ForceSwap;
+
+wire            PowerButtonDebounce;
+wire            ResetOut_ox;
+wire            RstBiosFlg;
+
+wire            PsonFromPwrEvent;
+wire            bPwrSystemReset;
+wire            bPowerEvtFlashReg;
+wire            bRdIntFlashPwrEvtCfg;
+wire            bWrIntFlashPwrEvtCfg;
+wire            PwrLastStateWrBit;
+wire    [3:0]   EvpDbgP;
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -453,18 +467,8 @@ wire            ForceSwap;
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-// Reset signals
-assign RST_CPU0_LVC3_N = RST_PLTRST_N;
-assign RST_PLTRST_BUF_N = RST_PLTRST_N;
-assign RST_DLY_CPURST_LVC3 = RST_PLTRST_N;
-assign RST_PERST0_N = RST_PLTRST_N;
-
 assign BIOS_LED_N[0] = BiosStatus[2];
 assign BIOS_LED_N[1] = ~BiosStatus[2];
-assign FM_SYS_SIO_PWRBTN_N = PWR_BTN_IN_N; // PWR_BTN_IN_N is not controlled.
-assign RST_PCH_RSTBTN_N = SYS_RST_IN_N; // SYS_RST_IN_N is not controlled.
-assign RST_BCM56842_N_R = RST_PLTRST_N;
-assign RST_1G_N_R = RST_PLTRST_N;
 assign RST_DME_N = RST_PLTRST_N;
 assign UNLOCK_BIOS_ME = 1'bz;
 assign CPLD_LAN_ACT_N[0] = (2'b11 == {LAN_LINK1000_N[0], LAN_LINK100_N[0]}) ? 1'b1 : ~LAN_ACT_N[0];
@@ -481,8 +485,7 @@ assign PSU_Fail_N = 2'b11;
 assign FAN_LEDR_N = 1'b1;
 assign FAN_LEDG_N = 1'b1;
 assign DMEControl = 6'h00;
-assign SYS_RST_IN_SIO_N = 1'b1;
-assign CPLD_PCH_INT_N         =  1'b1;
+assign CPLD_PCH_INT_N = 1'b1;
 assign PMB_CLK = 1'b0;
 assign FPGA_TXD_N = 1'b0;
 
@@ -594,7 +597,8 @@ PwrSequence
                    .FM_PLD_DEBUG3(FM_PLD_DEBUG3),               // Out
                    .FM_PLD_DEBUG4(FM_PLD_DEBUG4),               // Out
                    .FM_PLD_DEBUG5(FM_PLD_DEBUG5),               // Out
-                   .PsonFromPwrEvent(1'b1));                    // In, Integration to MstrSeq.sv is not validated yet.
+//                   .PsonFromPwrEvent(PsonFromPwrEvent));        // In, Integration to MstrSeq.sv is not validated yet.
+                   .PsonFromPwrEvent(1'b1));        // In, Integration to MstrSeq.sv is not validated yet. // Carlos
 
 Lpc
     u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
@@ -616,6 +620,7 @@ BiosControl
     u_BiosControl (.ResetN(InitResetn),       // Power reset
                    .MainReset(!MainResetN),    // Power or Controller ICH10R Reset
                    .LpcClock(LCLK_CPLD),        // 33 MHz Lpc (Altera Clock)
+                   .RstBiosFlg(RstBiosFlg),     // In, Reset BIOS to BIOS0
                    .Write(Wr),                  // Write Access to CPLD registor
                    .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)
                    .BIOS_SEL(BIOS_SEL),         // BIOS SELECT  - Bios Select Jumper (default "1")
@@ -627,27 +632,27 @@ BiosControl
                    .BiosStatus(BiosStatus));    // BIOS status
 
 HwResetGenerate
-    u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N), // In, P3V3_AUX power on reset input
-                       .MCLKi(LCLK_CPLD),           // In, 33MHz input
-                       .RSMRST_N(RST_RSMRST_N),     // In,
-                       .PLTRST_N(RST_PLTRST_N),     // In,
-                       .Reset1G(1'b1),              // In,
-                       .ResetOut_ox(1'b1),          // In, From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
-                       .FM_PS_EN(FM_PS_EN),         // In,
+    u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N),                 // In, P3V3_AUX power on reset input
+                       .MCLKi(LCLK_CPLD),                           // In, 33MHz input
+                       .RSMRST_N(RST_RSMRST_N),                     // In,
+                       .PLTRST_N(RST_PLTRST_N),                     // In,
+                       .Reset1G(1'b1),                              // In,
+                       .ResetOut_ox(ResetOut_ox),                          // In, From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
+                       .FM_PS_EN(FM_PS_EN),                         // In,
 
-                       .CLK32KHz(CLK32768),         // Out, 32.768KHz output from a divider
-                       .InitResetn(InitResetn),     // Out, 941us assert duration ( Low active ) from ( HARD_nRESETi & RSMRST_N ) rising edge
-                       .MainResetN(MainResetN),     // Out, MainResetN = InitResetn & PLTRST_N
-                       .RST_CPU0_LVC3_N(),          // Out, Pin M14, to Circuit for fault trigger event ( back to CPLD )
-                       .RST_PLTRST_BUF_N(),         // Out, Pin C15, to 07 gate buffer, then drive SIO6779, U5(PCA9548) and U57(EPM1270)
-                       .RST_DLY_CPURST_LVC3(),      // Out, Pin G12, drive ProcHot circuit, During Reset assertion period, only allow CPU
-                                                    //           ProcHot to be monitored, After reset de-assertion, CPU ProcHot and IR PWM
-                                                    //           Hot signal are monitored.
-                       .RST_PERST0_N(),             // Out, Pin L16, to 07 gate buffer, then drive J8 and J9 ( both are PCIe x8 slots )
-                       .RST_BCM56842_N_R(),         // Out, Pin F16, to reset BCM56842
-                       .RST_1G_N_R(),               // Out,
-                       .SYS_RST_IN_SIO_N(),         // Out,
-                       .RST_PCH_RSTBTN_N());        // Out,
+                       .CLK32KHz(CLK32768),                         // Out, 32.768KHz output from a divider
+                       .InitResetn(InitResetn),                     // Out, 941us assert duration ( Low active ) from ( HARD_nRESETi & RSMRST_N ) rising edge
+                       .MainResetN(MainResetN),                     // Out, MainResetN = InitResetn & PLTRST_N
+                       .RST_CPU0_LVC3_N(RST_CPU0_LVC3_N),           // Out, Pin M14, to Circuit for fault trigger event ( back to CPLD )
+                       .RST_PLTRST_BUF_N(RST_PLTRST_BUF_N),         // Out, Pin C15, to 07 gate buffer, then drive SIO6779, U5(PCA9548) and U57(EPM1270)
+                       .RST_DLY_CPURST_LVC3(RST_DLY_CPURST_LVC3),   // Out, Pin G12, drive ProcHot circuit, During Reset assertion period, only allow CPU
+                                                                    //           ProcHot to be monitored, After reset de-assertion, CPU ProcHot and IR PWM
+                                                                    //           Hot signal are monitored.
+                       .RST_PERST0_N(RST_PERST0_N),                 // Out, Pin L16, to 07 gate buffer, then drive J8 and J9 ( both are PCIe x8 slots )
+                       .RST_BCM56842_N_R(RST_BCM56842_N_R),         // Out, Pin F16, to reset BCM56842
+                       .RST_1G_N_R(RST_1G_N_R),                     // Out,
+                       .SYS_RST_IN_SIO_N(SYS_RST_IN_SIO_N),         // Out,
+                       .RST_PCH_RSTBTN_N(RST_PCH_RSTBTN_N));        // Out,
 
 Led7SegDecode
     u_Led7SegDecode (.ResetN(InitResetn),
@@ -663,7 +668,7 @@ Led7SegDecode
                      .x7SegSel(x7SegSel),
                      .x7SegVal(x7SegVal),
 
-                     .PowerEvtState(4'h0),
+                     .PowerEvtState(PowerEvtState),
                      .Led7En(LED7_digit),
                      .Led7Leg(LED7_SEG),
 
@@ -674,29 +679,80 @@ Led7SegDecode
                      .PORT80_DP(LED7_SEGDP));
 
 StrobeGen
-  u_StrobeGen (.ResetN(InitResetn),             // In,
-               .LpcClock(LCLK_CPLD),            // In, 33 MHz Lpc (Altera Clock)
-               .SlowClock(CLK32768),            // In, Oscillator Clock 32,768 Hz
-               .Strobe1s(Strobe1s),             // Out, Single SlowClock Pulse @ 1 s
-               .Strobe488us(Strobe488us),       // Out, Single SlowClock Pulse @ 488 us
-               .Strobe1ms(Strobe1ms),           // Out, Single SlowClock Pulse @ 1 ms
-               .Strobe16ms(Strobe16ms),         // Out, Single SlowClock Pulse @ 16 ms
-               .Strobe125ms(Strobe125ms),       // Out, Single SlowClock Pulse @ 125 ms
-               .Strobe125msec(Strobe125msec),   // Out, Single LpcClock  Pulse @ 125 ms
-               .Counter(Counter));              // Out, 15 bit Free run Counter on Slow Clock
+    u_StrobeGen (.ResetN(InitResetn),             // In,
+                 .LpcClock(LCLK_CPLD),            // In, 33 MHz Lpc (Altera Clock)
+                 .SlowClock(CLK32768),            // In, Oscillator Clock 32,768 Hz
+                 .Strobe1s(Strobe1s),             // Out, Single SlowClock Pulse @ 1 s
+                 .Strobe488us(Strobe488us),       // Out, Single SlowClock Pulse @ 488 us
+                 .Strobe1ms(Strobe1ms),           // Out, Single SlowClock Pulse @ 1 ms
+                 .Strobe16ms(Strobe16ms),         // Out, Single SlowClock Pulse @ 16 ms
+                 .Strobe125ms(Strobe125ms),       // Out, Single SlowClock Pulse @ 125 ms
+                 .Strobe125msec(Strobe125msec),   // Out, Single LpcClock  Pulse @ 125 ms
+                 .Counter(Counter));              // Out, 15 bit Free run Counter on Slow Clock
 
 BiosWatchDog
-  u_BiosWatchDog (.Reset(InitResetn),               // In, Generated PowerUp Reset
-                  .SlowClock(CLK32768),             // In, Oscillator Clock 32,768 Hz
-                  .LpcClock(LCLK_CPLD),             // In, 33 MHz Lpc (Altera Clock)
-                  .MainReset(MainResetN),           // In, Power or Controller ICH10R Reset
-                  .PS_ONn(FM_PS_EN),                // In,
-                  .DPx(),                           // Out,
-                  .Strobe125msec(Strobe125msec),    // In, Single LpcClock  Pulse @ 125 ms
-                  .WriteBiosWD(WriteBiosWD),        // In, CPU (BIOS) writes to BIOS WD Register (#1)
-                  .BiosRegister(BiosRegister),      // In, Bios Watch Dog Control Register
-                  .BiosFinished(BiosFinished),      // Out, Bios Has been finished
-                  .BiosPowerOff(BiosPowerOff),      // Out, BiosWD Occurred, Force Power Off
-                  .ForceSwap(ForceSwap));           // Out, BiosWD Occurred, Force BIOS Swap while power restart
+    u_BiosWatchDog (.Reset(InitResetn),               // In, Generated PowerUp Reset
+                    .SlowClock(CLK32768),             // In, Oscillator Clock 32,768 Hz
+                    .LpcClock(LCLK_CPLD),             // In, 33 MHz Lpc (Altera Clock)
+                    .MainReset(MainResetN),           // In, Power or Controller ICH10R Reset
+                    .PS_ONn(FM_PS_EN),                // In,
+                    .DPx(),                           // Out,
+                    .Strobe125msec(Strobe125msec),    // In, Single LpcClock  Pulse @ 125 ms
+                    .WriteBiosWD(WriteBiosWD),        // In, CPU (BIOS) writes to BIOS WD Register (#1)
+                    .BiosRegister(BiosRegister),      // In, Bios Watch Dog Control Register
+                    .BiosFinished(BiosFinished),      // Out, Bios Has been finished
+                    .BiosPowerOff(BiosPowerOff),      // Out, BiosWD Occurred, Force Power Off
+                    .ForceSwap(ForceSwap));           // Out, BiosWD Occurred, Force BIOS Swap while power restart
+
+ButtonControl
+    u_ButtonControl (.MainReset(InitResetn),                        // In, Power or Controller ICH10R Reset
+                     .SlowClock(CLK32768),                          // In, Oscillator Clock 32,768 Hz
+                     .Strobe1s(Strobe1s),                           // In, Single SlowClock Pulse @ 1s
+                     .Strobe16ms(Strobe16ms),                       // In, Single SlowClock Pulse @ 16 ms
+                     .Strobe125ms(Strobe125ms),                     // In, Single SlowClock Pulse @ 125 ms
+                     .SysReset(SYS_RST_IN_N),                       // In, Reset Button
+                     .PowerButtonIn(PWR_BTN_IN_N),                  // In, Power Button
+                     .WatchDogReset(1'b0),                          // In, System Watch Dog Reset Request
+                     .PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3),       // In,
+                     .FM_PS_EN(FM_PS_EN),                           // In,
+                     .PowerbuttonEvt(PowerbuttonEvtOut),            // In,
+                     .PowerEvtState(PowerEvtState),                 // In,
+                     .Interrupt(),                                  // Out, Power & Reset Interrupts and Button release
+                     .PowerButtonDebounce(PowerButtonDebounce),     // Out, Debounced Power Button
+                     .ResetOut(ResetOut_ox),                        // Out, Active Wide Strobe 4s after  the button pushed
+                     .RstBiosFlg(RstBiosFlg),                       // Out,
+                     .FM_SYS_SIO_PWRBTN_N(FM_SYS_SIO_PWRBTN_N));    // Out
+
+PwrEvent
+    u_PwrEvent (.ResetN(InitResetn),
+                .CLK32768(CLK32768),
+                .Strobe1ms(Strobe1ms),
+                .PowerbuttonIn(PWR_BTN_IN_N),
+                .PwrLastStateRdBit(1'b1),
+                .SLP_S3n(FM_SLPS3_N),
+                .ATX_PowerOK(PWRGD_PS_PWROK_3V3),
+                .ALL_PWRGD(PWRGD_CPUPWRGD),
+                .BiosLed(BIOS_LED_N),
+                .bCPUWrWdtRegSig(bCPUWrWdtRegSig),
+                .PowerOff(BiosPowerOff),
+
+                .PowerEvtState(PowerEvtState),
+                .PowerbuttonEvtOut(PowerbuttonEvtOut),
+                .PS_ONn(PsonFromPwrEvent),
+                .bPwrSystemReset(bPwrSystemReset),
+                .bFlashPromReq(bPowerEvtFlashReg),
+                .bRdPromCfg(bRdIntFlashPwrEvtCfg),
+                .bWrPromCfg(bWrIntFlashPwrEvtCfg),
+                .PwrLastStateWrBit(PwrLastStateWrBit),
+                .DbgP(EvpDbgP));
+
+BiosWdtDecode
+    u_BiosWdtDecode (.MainResetN(MainResetN),               // In,
+                     .CLK32768(CLK32768),                   // In,
+                     .Mclkx(LCLK_CPLD),                     // In,
+                     .WriteBiosWD(WriteBiosWD),             // In, BIOS watch dog register write
+                     .WrDev_Data(DataWr),                   // In,
+
+                     .bCPUWrWdtRegSig(bCPUWrWdtRegSig));    // Out,
 
 endmodule  // end of ODS_MR,  top  module of this project

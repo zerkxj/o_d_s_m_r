@@ -20,13 +20,15 @@ module LpcReg (
     LpcClock,       // In, 33 MHz Lpc (LPC Clock)
     Addr,           // In, register address
     Wr,             // In, write operation
-    DataWr,         // In, write data
+    DataWrSW,       // In, write data from SW
     BiosStatus,     // In, BIOS status setup value
+    IntReg,         // In, Interrupt register setup value
     DataReg,        // Out, Register data
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 segment LED select
     x7SegVal,       // Out, 7 segment LED value
-    BiosRegister    // Out, BIOS watch dog register
+    BiosRegister,   // Out, BIOS watch dog register
+    IntRegister     // Out, Interrupt register
 );
 
 //------------------------------------------------------------------------------
@@ -52,6 +54,7 @@ localparam TD = 1;
 // Variable declaration
 //------------------------------------------------------------------------------
 int loop;
+int k;
 
 //------------------------------------------------------------------------------
 // Input/Output declaration
@@ -63,8 +66,9 @@ input           PciReset;
 input           LpcClock;
 input   [7:0]   Addr;
 input           Wr;
-input   [7:0]   DataWr;
+input   [7:0]   DataWrSW;
 input   [2:0]   BiosStatus;
+input   [6:4]   IntReg;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -74,6 +78,7 @@ output          SystemOK;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output  [7:0]   BiosRegister;
+output  [7:0]   IntRegister;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -100,7 +105,8 @@ output  [7:0]   BiosRegister;
 //------------------------------------------------------------------
 // Internal signal
 //------------------------------------------------------------------
-// None
+reg     [7:0]   DataWr;
+reg     [7:0]   DataWrHW    [31:0];
 
 //------------------------------------------------------------------
 // FSM
@@ -209,11 +215,26 @@ assign SystemOK = DataReg[8][6];
 assign x7SegSel = DataReg[14][4:0];
 assign x7SegVal = DataReg[15];
 assign BiosRegister = DataReg[1];
+assign IntRegister = DataReg[9];
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-// None
+always @ (Addr or DataWrSW or IntReg) begin
+    case (Addr)
+        8'h09: DataWr = {DataWrSW[7], IntReg, DataWrSW[3:0]};
+        default: DataWr = DataWrSW;
+    endcase
+end
+
+always @ (DataReg[k] or IntReg) begin
+    for (loop=0; loop<32; loop=loop+1)
+        case (loop)
+            8'h09: DataWrHW[loop] = {DataReg[loop][7], IntReg,
+                                     DataReg[loop][3:0]};
+            default: DataWrHW[loop] = DataReg[loop];
+        endcase
+end
 
 //----------------------------------------------------------------------
 // FSM
@@ -236,9 +257,9 @@ always @ (posedge LpcClock or negedge PciReset) begin
                 if (Addr == loop)
                     DataReg[loop] <= DataMask(loop, DataWr, DataReg[loop]);
                 else
-                    DataReg[loop] <= DataReg[loop];
+                    DataReg[loop] <= DataWrHW[loop];
             else
-                DataReg[loop] <= DataReg[loop];
+                DataReg[loop] <= DataWrHW[loop];
         end
 end
 

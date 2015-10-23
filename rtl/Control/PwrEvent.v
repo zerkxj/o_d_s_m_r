@@ -12,10 +12,13 @@
 //  Programming a page ( 16 byte ) data to UFM needs around 0.2 ms.
 //  Reading a page from UFM needs the time less than 1 ms.
 //  Therefore , the timing for UFM write will be redefined.
-//   Add four parameters : T1020 = T1000 + T20 = 0x03E7 + 0x0020
+//  Add Seven parameters : T1020 = T1000 + T20 = 0x03E7 + 0x0020
 //                         T1030 = T1000 + T30 = 0x03E7 + 0x0030
 //                         T1040 = T1000 + T40 = 0x03E7 + 0x0040
 //                         T1050 = T1000 + T50 = 0x03E7 + 0x0050
+//                         T1060 = T1000 + T60 = 0x03E7 + 0x0060
+//                         T1070 = T1000 + T70 = 0x03E7 + 0x0070
+//                         T1080 = T1000 + T80 = 0x03E7 + 0x0080
 //  For bWr_bRd pair, T20-T30_T40-T50 will be replaced by T20-T1020_T1030-T1040
 //  Five Power-Event states are modified :
 //  Event_PowerDown , Event_PowerFail , Event_SystemReset , Event_UpdatePwrSt ,
@@ -40,6 +43,9 @@
 `define EvtTimer_T1030      16'h0042
 `define EvtTimer_T1040      16'h0043
 `define EvtTimer_T1050      16'h0044
+`define EvtTimer_T1060      16'h0045   
+`define EvtTimer_T1070      16'h0046   
+`define EvtTimer_T1080      16'h0047
 `define EvtTimer_T2000      16'h0050
 `define EvtTimer_T3000      16'h0060
 `define EvtTimer_T4000      16'h0070
@@ -47,27 +53,30 @@
 `define EvtTimer_T6000      16'h0090    // 6  sec.
 `define EvtTimer_T7000      16'h00A0    // 7  sec.
 `define EvtTimer_T8000      16'h00B0
-`define EvtTimer_T64000     16'h0100 // 64 sec. Frank 05072015 add this define
+`define EvtTimer_T64000     16'h0100    // 64 sec.
 `else
-`define EvtTimer_T10        16'h0010
-`define EvtTimer_T20        16'h0020
-`define EvtTimer_T30        16'h0030
-`define EvtTimer_T40        16'h0040
-`define EvtTimer_T50        16'h0050
+`define EvtTimer_T10        16'h0010    // 16ms
+`define EvtTimer_T20        16'h0020    // 32ms
+`define EvtTimer_T30        16'h0030    // 48ms
+`define EvtTimer_T40        16'h0040    // 64ms
+`define EvtTimer_T50        16'h0050    // 80ms
 `define EvtTimer_T100       16'h0064    // 100ms
 `define EvtTimer_T512       16'h0200    // 512ms
 `define EvtTimer_T1000      16'h03E7    // 1  sec.
-`define EvtTimer_T1020      16'h0417   // 0x03E7 + 0x0020
-`define EvtTimer_T1030      16'h0427   // 0x03E7 + 0x0030
-`define EvtTimer_T1040      16'h0437   // 0x03E7 + 0x0040
-`define EvtTimer_T1050      16'h0447   // 0x03E7 + 0x0050
+`define EvtTimer_T1020      16'h0407    // 0x03E7 + 0x0020 , 1032ms
+`define EvtTimer_T1030      16'h0417    // 0x03E7 + 0x0030 , 1048ms
+`define EvtTimer_T1040      16'h0427    // 0x03E7 + 0x0040 , 1064ms
+`define EvtTimer_T1050      16'h0437    // 0x03E7 + 0x0050 , 1080ms
+`define EvtTimer_T1060      16'h0447    // 0x03E7 + 0x0060 , 1096ms
+`define EvtTimer_T1070      16'h0457    // 0x03E7 + 0x0070 , 1112ms
+`define EvtTimer_T1080      16'h0467    // 0x03E7 + 0x0080 , 1128ms
 `define EvtTimer_T2000      16'h07CF    // 2  sec.
 `define EvtTimer_T3000      16'h0BB7    // 3  sec.
 `define EvtTimer_T4000      16'h0F9F    // 4  sec.
 `define EvtTimer_T5000      16'h1387    // 5  sec.
 `define EvtTimer_T6000      16'h176F    // 6  sec.
 `define EvtTimer_T7000      16'h1B57    // 7  sec.
-`define EvtTimer_T8000      16'h1FFF    // 8  sec.
+`define EvtTimer_T8000      16'h1F3F    // 8  sec.
 `define EvtTimer_T64000     16'hF9FF    // 64 sec.
 `endif
 
@@ -92,7 +101,8 @@ module PwrEvent (
     ALL_PWRGD,
     BiosLed,
     bCPUWrWdtRegSig,
-    PowerOff,
+    BiosPowerOff,
+    Shutdown,
 
     PowerEvtState,
     PowerbuttonEvtOut,
@@ -145,7 +155,8 @@ input           ATX_PowerOK;
 input           ALL_PWRGD;
 input   [1:0]   BiosLed;
 input   [4:0]   bCPUWrWdtRegSig;
-input           PowerOff;
+input           BiosPowerOff;
+input           Shutdown;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -170,6 +181,7 @@ output  [3:0]   DbgP;
 // Combinational, module connection
 //----------------------------------------------------------------------
 wire            bBiosPostRdySig;
+wire            bEnterBiosSetUpMenu;
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -244,6 +256,7 @@ assign DbgP = {SLP_S3n, PwrLastStateWrBit, CounterCnt[0], ATX_PowerOK};
 // Internal signal
 //----------------------------------------------------------------------
 assign bBiosPostRdySig = bCPUWrWdtRegSig[2];
+assign bEnterBiosSetUpMenu = bCPUWrWdtRegSig[1];
 
 //----------------------------------------------------------------------
 // FSM
@@ -263,15 +276,15 @@ always @ (posedge CLK32768 or negedge ResetN) begin
              case (PowerEvtState) // There are 13 PwrEventStates for polling cases
                  `Event_InitPowerUp: begin // PwrEventState = 0x0
                      if(CounterCnt < `EvtTimer_T100)
-                             PowerEvtState <= #TD PowerEvtState;
+                         PowerEvtState <= #TD PowerEvtState;
                      else if(PwrLastStateRdBit == `PwrStateOk)
                               PowerEvtState <= #TD `Event_PowerStandBy;
                           else
                               PowerEvtState <= #TD `Event_SLP_S3n;
                  end
                  `Event_SLP_S3n: begin // PwrEventState <= #TD 0xA
-                     if(SLP_S3n == `CPUStateWorking )
-                         if(bFirstPwrUp == `FALSE )
+                     if(SLP_S3n == `CPUStateWorking)
+                         if(!bFirstPwrUp)
                              PowerEvtState <= #TD `Event_PowerStandBy;
                          else
                              PowerEvtState <= #TD `Event_Reboot;
@@ -280,7 +293,7 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                  end
                  `Event_PowerStandBy: begin // PwrEventState = 0x1
                      if(PowerbuttonIn == `PowerButtonRls)
-                         if(BootUpRtyCnt != 2'b00 )
+                         if(BootUpRtyCnt != 2'b00)
                              PowerEvtState <= #TD `Event_Reboot;
                          else
                              PowerEvtState <= #TD PowerEvtState;
@@ -293,12 +306,13 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                      // the power button has been press, check the SLP_S3#
                      if(CounterCnt < `EvtTimer_T1050)
                          PowerEvtState <= #TD PowerEvtState;
-                     else if(CounterCnt > `EvtTimer_T2000)
+                     else if(CounterCnt >= `EvtTimer_T1050 && CounterCnt <= `EvtTimer_T2000)
+                              if(SLP_S3n != `CPUStateWorking)
+                                  PowerEvtState <= #TD PowerEvtState;
+                              else
+                                  PowerEvtState <= #TD `Event_Reboot;
+                          else
                               PowerEvtState <= #TD `Event_PowerStandBy;
-                          else if(SLP_S3n == `CPUStateWorking)
-                                   PowerEvtState <= #TD `Event_Reboot;
-                               else
-                                   PowerEvtState <= #TD PowerEvtState;
                           
                  end
                  `Event_Reboot: begin // PwrEventState = 0x2
@@ -307,51 +321,66 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                              PowerEvtState <= #TD PowerEvtState;
                          else
                              PowerEvtState <= #TD `Event_Wait2s;
-                     else if(ATX_PowerOK == `FALSE)
+                     else if(!ATX_PowerOK)
                               PowerEvtState <= #TD `Event_Wait2s;
-                          else if(ALL_PWRGD == `HIGH)
+                          else if(ALL_PWRGD)
                                    PowerEvtState <= #TD `Event_BiosPost_Wait;
                                else
                                    PowerEvtState <= #TD `Event_Wait2s;
                  end
                  `Event_BiosPost_Wait: begin // PwrEventState = 0xC
-                     if(bBiosPostRdySig == `TRUE)
+                     if(bBiosPostRdySig)
                          PowerEvtState <= #TD `Event_UpdatePwrSt;
-                     else if(CounterCnt < `EvtTimer_T64000)
-                              if(PrvBiosLed == BiosLed)
-                                  PowerEvtState <= #TD PowerEvtState;
-                              else
-                                  PowerEvtState <= #TD `Event_Wait2s;
-                          else
-                              PowerEvtState <= #TD `Event_Wait2s;
+                     else if(bEnterBiosSetUpMenu)
+                              PowerEvtState <= #TD PowerEvtState;
+                          else if(CounterCnt < `EvtTimer_T64000)
+                                   if(PrvBiosLed == BiosLed)
+                                       if(!SLP_S3n)
+                                           if(!PowerbuttonIn)
+                                               PowerEvtState <= #TD `Event_SystemReset;
+                                           else
+                                               PowerEvtState <= #TD `Event_Wait2s;
+                                       else if(BiosPowerOff)
+                                                PowerEvtState <= #TD `Event_Wait2s;
+                                            else
+                                                PowerEvtState <= #TD PowerEvtState;
+                                   else
+                                       PowerEvtState <= #TD `Event_Wait2s;
+                               else
+                                   PowerEvtState <= #TD `Event_Wait2s;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
                          PowerEvtState <= #TD PowerEvtState;
-                     else if(ATX_PowerOK == `FALSE)
+                     else if(!ATX_PowerOK)
                               PowerEvtState <= #TD `Event_Wait2s;
-                          else if(ALL_PWRGD == `HIGH)
+                          else if(ALL_PWRGD)
                                    PowerEvtState <= #TD `Event_SystemRun;
                                else
                                    PowerEvtState <= #TD `Event_Wait2s;
                  end
                  `Event_SystemRun: begin // PwrEventState = 0x4
-                     if(PowerOff)
+                     if(Shutdown)
                          PowerEvtState <= #TD `Event_PowerDown;
-                     else
-                         case ({SLP_S3n, ATX_PowerOK})
-                             2'b00: PowerEvtState <= #TD `Event_PowerFail;
-                             2'b01: PowerEvtState <= #TD `Event_SystemReset;
-                             2'b10: PowerEvtState <= #TD `Event_PowerFail;
-                             2'b11: PowerEvtState <= #TD `Event_SystemRun;
-                         endcase
+                     else if(BiosPowerOff)
+                              PowerEvtState <= #TD `Event_Wait2s;
+                          else
+                              case ({SLP_S3n, ATX_PowerOK})
+                                  2'b00: PowerEvtState <= #TD `Event_SystemReset;
+                                  2'b01: PowerEvtState <= #TD `Event_SystemReset;
+                                  2'b10: PowerEvtState <= #TD `Event_PowerFail;
+                                  2'b11: PowerEvtState <= #TD `Event_SystemRun;
+                              endcase
                  end
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          PowerEvtState <= #TD PowerEvtState;
-                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T7000))
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T7000))
                               if(SLP_S3n == `CPUStateSleep)
-                                  PowerEvtState <= #TD PowerEvtState;
+                                  if(!PowerbuttonIn)
+                                      PowerEvtState <= #TD `Event_Wait2s;
+                                  else
+                                      PowerEvtState <= #TD PowerEvtState;
                               else
                                   PowerEvtState <= #TD `Event_PowerCycle;
                           else
@@ -367,10 +396,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          PowerEvtState <= #TD `Event_SystemRun;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
+                     if(CounterCnt < `EvtTimer_T2000)
                          PowerEvtState <= #TD PowerEvtState;
-                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              if(ATX_PowerOK == `TRUE)
+                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
+                              if(ATX_PowerOK)
                                   PowerEvtState <= #TD `Event_Wait2s;
                               else
                                   PowerEvtState <= #TD PowerEvtState;
@@ -394,7 +423,7 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                  `Event_Wait2s: begin // PwrEventState = 0x8
                      if(CounterCnt <`EvtTimer_T6000)
                          PowerEvtState <= #TD PowerEvtState;
-                     else if(bPwrFailUp == `FALSE)
+                     else if(!bPwrFailUp)
                               PowerEvtState <= #TD `Event_PowerStandBy;
                           else
                               PowerEvtState <= #TD `Event_SLP_S3n;
@@ -465,16 +494,16 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                  `Event_UpdatePwrSt: PS_ONn <= #TD `PwrSW_On; // PwrEventState = 0x3
                  `Event_SystemRun: PS_ONn <= #TD `PwrSW_On; // PwrEventState = 0x4
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          PS_ONn <= #TD `PwrSW_On;
-                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T7000))
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T7000))
                               PS_ONn <= #TD `PwrSW_Off;
                           else
                               PS_ONn <= #TD PS_ONn;
                  end
                  `Event_PowerCycle: PS_ONn <= #TD `PwrSW_On; // PwrEventState = 0x6
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
+                     if(CounterCnt < `EvtTimer_T2000)
                          PS_ONn <= #TD `PwrSW_On;
                      else
                          PS_ONn <= #TD PS_ONn;
@@ -502,45 +531,51 @@ end
 
 always @ (posedge CLK32768 or negedge ResetN) begin
     if(!ResetN)
-        bFlashPromReq <= #TD `FALSE;
+        bFlashPromReq <= #TD 1'b0;
     else if(Strobe1ms) // polling PwrEventState every 1ms after ResetN de-assertion
              case (PowerEvtState) // There are 13 PwrEventStates for polling cases
                  `Event_SLP_S3n_UpChk: begin // PwrEventState = 0xB
                      // the power button has been press, check the SLP_S3#
                      if(CounterCnt < `EvtTimer_T1050)
-                         bFlashPromReq <= #TD `TRUE;
-                     else if(CounterCnt > `EvtTimer_T2000)
-                              bFlashPromReq <= #TD bFlashPromReq;
+                         bFlashPromReq <= #TD 1'b1;
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt <= `EvtTimer_T2000))
+                              bFlashPromReq <= #TD 1'b0;
                           else
-                              bFlashPromReq <= #TD `FALSE;
+                              bFlashPromReq <= #TD bFlashPromReq;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
-                         bFlashPromReq <= #TD `TRUE;
+                         bFlashPromReq <= #TD 1'b1;
                      else
-                         bFlashPromReq <= #TD `FALSE;
+                         bFlashPromReq <= #TD 1'b0;
                  end
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
-                         bFlashPromReq <= #TD `TRUE;
-                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T7000))
-                              bFlashPromReq <= #TD `FALSE;
+                     if(CounterCnt < `EvtTimer_T1050)
+                         bFlashPromReq <= #TD 1'b1;
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T7000))
+                              bFlashPromReq <= #TD 1'b0;
                           else
                               bFlashPromReq <= #TD bFlashPromReq;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
-                         bFlashPromReq <= #TD `TRUE;
-                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              bFlashPromReq <= #TD `FALSE;
+                     if(CounterCnt < `EvtTimer_T2000)
+                         if(CounterCnt < `EvtTimer_T40)
+                             bFlashPromReq <= #TD bFlashPromReq;
+                         else if((CounterCnt >= `EvtTimer_T40) && (CounterCnt < `EvtTimer_T1060))
+                                  if(!PwrLastStateRdBit)
+                                      bFlashPromReq <= #TD bFlashPromReq;
+                                  else 
+                                      bFlashPromReq <= #TD 1'b1;
+                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
+                              bFlashPromReq <= #TD 1'b0;
                           else
-                              bFlashPromReq <= #TD `FALSE;
+                              bFlashPromReq <= #TD 1'b0;
                  end
                  `Event_PowerDown: begin // PwrEventState = 0x9
                      if(CounterCnt < `EvtTimer_T1050)
-                         bFlashPromReq <= #TD `TRUE;
+                         bFlashPromReq <= #TD 1'b1;
                      else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              bFlashPromReq <= #TD `FALSE;
+                              bFlashPromReq <= #TD 1'b0;
                           else
                               bFlashPromReq <= #TD bFlashPromReq;
                  end
@@ -590,7 +625,7 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                         bRdPromCfg <= #TD bRdPromCfg;
                  end
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          if(CounterCnt == `EvtTimer_T1030)
                              bRdPromCfg <= #TD 1'b1;
                          else if(CounterCnt == `EvtTimer_T1040)
@@ -601,13 +636,17 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          bRdPromCfg <= #TD bRdPromCfg;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
-                         if(CounterCnt == `EvtTimer_T1030)
+                     if(CounterCnt < `EvtTimer_T2000)
+                         if(CounterCnt == `EvtTimer_T20)
                              bRdPromCfg <= #TD 1'b1;
-                         else if(CounterCnt == `EvtTimer_T1040)
+                         else if(CounterCnt == `EvtTimer_T30)
                                   bRdPromCfg <= #TD 1'b0;
-                              else
-                                  bRdPromCfg <= #TD bRdPromCfg;
+                              else if(CounterCnt == `EvtTimer_T1070)
+                                       bRdPromCfg <= #TD 1'b1;
+                                   else if(CounterCnt == `EvtTimer_T1080)
+                                            bRdPromCfg <= #TD 1'b0;
+                                        else
+                                            bRdPromCfg <= #TD bRdPromCfg;
                      else
                          bRdPromCfg <= #TD bRdPromCfg;
                  end
@@ -657,7 +696,7 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          bWrPromCfg <= #TD bWrPromCfg;
                  end
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          if(CounterCnt == `EvtTimer_T20)
                              bWrPromCfg <= #TD 1'b1;
                          else if(CounterCnt == `EvtTimer_T1020)
@@ -668,10 +707,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          bWrPromCfg <= #TD bWrPromCfg;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
-                         if(CounterCnt <= `EvtTimer_T20)
+                     if(CounterCnt < `EvtTimer_T2000)
+                         if(CounterCnt == `EvtTimer_T50)
                              bWrPromCfg <= #TD 1'b1;
-                         else if(CounterCnt == `EvtTimer_T1020)
+                         else if(CounterCnt == `EvtTimer_T1050)
                                   bWrPromCfg <= #TD 1'b0;
                               else
                                   bWrPromCfg <= #TD bWrPromCfg;
@@ -710,10 +749,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                      // the power button has been press, check the SLP_S3#
                      if(CounterCnt < `EvtTimer_T1050)
                          PwrLastStateWrBit <= #TD `PwrStateFail;
-                     else if(CounterCnt > `EvtTimer_T2000)
-                              PwrLastStateWrBit <= #TD PwrLastStateWrBit;
-                          else
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt <= `EvtTimer_T2000))
                               PwrLastStateWrBit <= #TD PwrLastStateRdBit;
+                          else
+                              PwrLastStateWrBit <= #TD PwrLastStateWrBit;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
@@ -722,17 +761,25 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          PwrLastStateWrBit <= #TD PwrLastStateRdBit;
                  end
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          PwrLastStateWrBit <= #TD `PwrStateOk;
-                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T7000))
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T7000))
                               PwrLastStateWrBit <= #TD PwrLastStateRdBit;
                           else
                               PwrLastStateWrBit <= #TD PwrLastStateWrBit;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
-                         PwrLastStateWrBit <= #TD `PwrStateFail;
-                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
+                     if(CounterCnt < `EvtTimer_T2000)
+                         if(CounterCnt < `EvtTimer_T40)
+                             PwrLastStateWrBit <= #TD PwrLastStateWrBit;
+                         else if((CounterCnt >= `EvtTimer_T40) && (CounterCnt < `EvtTimer_T1060))
+                                  if(!PwrLastStateRdBit)
+                                      PwrLastStateWrBit <= #TD PwrLastStateWrBit;
+                                  else
+                                      PwrLastStateWrBit <= #TD `PwrStateFail;
+                              else
+                                  PwrLastStateWrBit <= #TD PwrLastStateWrBit;
+                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
                               PwrLastStateWrBit <= #TD PwrLastStateRdBit;
                           else
                               PwrLastStateWrBit <= #TD PwrLastStateRdBit;
@@ -787,12 +834,13 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                      // the power button has been press, check the SLP_S3#
                      if(CounterCnt < `EvtTimer_T1050)
                          CountState_N <= #TD 1'b1;
-                     else if(CounterCnt > `EvtTimer_T2000)
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt <= `EvtTimer_T2000))
+                              if(SLP_S3n != `CPUStateWorking)
+                                  CountState_N <= #TD 1'b1;
+                              else
+                                  CountState_N <= #TD 1'b0;
+                          else
                               CountState_N <= #TD 1'b0;
-                          else if(SLP_S3n != `CPUStateWorking)
-                                   CountState_N <= #TD 1'b1;
-                               else
-                                   CountState_N <= #TD 1'b0;
                  end
                  `Event_Reboot: begin // PwrEventState = 0x2
                      if(CounterCnt < `EvtTimer_T5000)
@@ -804,15 +852,25 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          CountState_N <= #TD 1'b0;
                  end
                  `Event_BiosPost_Wait: begin // PwrEventState = 0xC
-                     if(bBiosPostRdySig == `TRUE)
+                     if(bBiosPostRdySig)
                          CountState_N <= #TD 1'b0;
-                     else if(CounterCnt < `EvtTimer_T64000)
-                              if(PrvBiosLed == BiosLed)
-                                  CountState_N <= #TD 1'b1;
-                              else
-                                  CountState_N <= #TD 1'b0;
-                          else
+                     else if(bEnterBiosSetUpMenu)
                               CountState_N <= #TD 1'b0;
+                          else if(CounterCnt < `EvtTimer_T64000)
+                                   if(PrvBiosLed == BiosLed)
+                                       if(!SLP_S3n)
+                                           if(PowerbuttonIn == `PowerButtonPress)
+                                               CountState_N <= #TD 1'b0;
+                                           else
+                                               CountState_N <= #TD 1'b0;
+                                       else if(BiosPowerOff)
+                                                CountState_N <= #TD 1'b0;
+                                            else
+                                                CountState_N <= #TD 1'b1;
+                                   else
+                                       CountState_N <= #TD 1'b0;
+                               else
+                                   CountState_N <= #TD 1'b0;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
@@ -822,11 +880,14 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                  end
                  `Event_SystemRun: CountState_N <= #TD 1'b0; // PwrEventState = 0x4
                  `Event_SystemReset: begin // PwrEventState = 0x5
-                     if(CounterCnt < `EvtTimer_T2000)
+                     if(CounterCnt < `EvtTimer_T1050)
                          CountState_N <= #TD 1'b1;
-                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T7000))
+                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T7000))
                               if(SLP_S3n == `CPUStateSleep)
-                                  CountState_N <= #TD 1'b1;
+                                  if(PowerbuttonIn == `PowerButtonPress)
+                                      CountState_N <= #TD 1'b0;
+                                  else
+                                      CountState_N <= #TD 1'b1;
                               else
                                   CountState_N <= #TD 1'b0;
                           else
@@ -842,10 +903,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          CountState_N <= #TD 1'b0;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
+                     if(CounterCnt < `EvtTimer_T2000)
                          CountState_N <= #TD 1'b1;
-                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              if(ATX_PowerOK == `TRUE) // AC restored, reboot the system
+                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
+                              if(ATX_PowerOK) // AC restored, reboot the system
                                   CountState_N <= #TD 1'b0;
                               else
                                   CountState_N <= #TD CountState_N;
@@ -891,35 +952,52 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                              BootUpRtyCnt <= #TD BootUpRtyCnt;
                          else
                              BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
-                     else if(ATX_PowerOK == `FALSE)
+                     else if(!ATX_PowerOK)
                               BootUpRtyCnt <= #TD 2'd1;
-                          else if(ALL_PWRGD == `HIGH)
+                          else if(ALL_PWRGD)
                                    BootUpRtyCnt <= #TD BootUpRtyCnt;
-                               else if(bFirstPwrUp == `FALSE)
+                               else if(!bFirstPwrUp)
                                         BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
                                     else
                                         BootUpRtyCnt <= #TD 2'd1;
                  end
                  `Event_BiosPost_Wait: begin // PwrEventState = 0xC
-                     if(bBiosPostRdySig == `TRUE)
+                     if(bBiosPostRdySig)
                          BootUpRtyCnt <= #TD BootUpRtyCnt;
-                     else if(CounterCnt < `EvtTimer_T64000)
-                              if(PrvBiosLed == BiosLed)
-                                  BootUpRtyCnt <= #TD BootUpRtyCnt;
-                              else
-                                  BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
-                          else
-                              BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
+                     else if(bEnterBiosSetUpMenu)
+                              BootUpRtyCnt <= #TD BootUpRtyCnt;
+                          else if(CounterCnt < `EvtTimer_T64000)
+                                   if(PrvBiosLed == BiosLed)
+                                       if(!SLP_S3n)
+                                         if(PowerbuttonIn == `PowerButtonPress)
+                                             BootUpRtyCnt <= #TD 2'd0;
+                                         else
+                                             BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
+                                       else if(BiosPowerOff)
+                                                BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
+                                            else
+                                                BootUpRtyCnt <= #TD BootUpRtyCnt;
+                                   else
+                                       BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
+                               else
+                                   BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
                          BootUpRtyCnt <= #TD BootUpRtyCnt;
-                     else if(ATX_PowerOK == `FALSE)
+                     else if(!ATX_PowerOK)
                               BootUpRtyCnt <= #TD 2'd1;
                           else
                               BootUpRtyCnt <= #TD BootUpRtyCnt;
                  end
-                 `Event_SystemRun: BootUpRtyCnt <= #TD 2'd0; // PwrEventState = 0x4
+                 `Event_SystemRun: begin
+                     if(Shutdown)
+                         BootUpRtyCnt <= #TD 2'd0; // PwrEventState = 0x4
+                     else if(BiosPowerOff)
+                              BootUpRtyCnt <= #TD BootUpRtyCnt + 2'd1;
+                          else
+                              BootUpRtyCnt <= #TD 2'd0; // PwrEventState = 0x4
+                 end
                  `Event_PowerCycle: begin // PwrEventState = 0x6
                     if(CounterCnt < `EvtTimer_T3000)
                         if(`CPUStateWorking == SLP_S3n)
@@ -930,10 +1008,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                         BootUpRtyCnt <= #TD BootUpRtyCnt;
                 end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
+                     if(CounterCnt < `EvtTimer_T2000)
                          BootUpRtyCnt <= #TD BootUpRtyCnt;
-                     else if((CounterCnt >= `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              if(ATX_PowerOK == `TRUE) // AC restored, reboot the system
+                     else if((CounterCnt >= `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
+                              if(ATX_PowerOK) // AC restored, reboot the system
                                   BootUpRtyCnt <= #TD 2'd1;
                               else
                                   BootUpRtyCnt <= #TD BootUpRtyCnt;
@@ -948,37 +1026,37 @@ end
 
 always @ (posedge CLK32768 or negedge ResetN) begin
     if(!ResetN)
-        bFirstPwrUp <= #TD `TRUE;
+        bFirstPwrUp <= #TD 1'b1;
     else if(Strobe1ms) // polling PwrEventState every 1ms after ResetN de-assertion
              case (PowerEvtState) // There are 13 PwrEventStates for polling cases
                  `Event_InitPowerUp: begin // PwrEventState = 0x0
                      if(CounterCnt < `EvtTimer_T100)
                          bFirstPwrUp <= #TD bFirstPwrUp;
                      else if(PwrLastStateRdBit == `PwrStateOk)
-                              bFirstPwrUp <= #TD `FALSE;
+                              bFirstPwrUp <= #TD 1'b0;
                           else
-                              bFirstPwrUp <= #TD `TRUE;
+                              bFirstPwrUp <= #TD 1'b1;
                  end
                  `Event_SLP_S3n: begin // PwrEventState <= #TD 0xA
                      if(SLP_S3n == `CPUStateWorking)
-                         if(bFirstPwrUp == `FALSE)
+                         if(!bFirstPwrUp)
                              bFirstPwrUp <= #TD bFirstPwrUp;
                          else
-                             bFirstPwrUp <= #TD `FALSE;
+                             bFirstPwrUp <= #TD 1'b0;
                      else
                          bFirstPwrUp <= #TD bFirstPwrUp;
                  end
                  `Event_Reboot: begin // PwrEventState = 0x2
                      if(CounterCnt < `EvtTimer_T5000)
                          bFirstPwrUp <= #TD bFirstPwrUp;
-                     else if(ATX_PowerOK == `FALSE)
+                     else if(!ATX_PowerOK)
                               bFirstPwrUp <= #TD bFirstPwrUp;
-                          else if(ALL_PWRGD == `HIGH)
+                          else if(ALL_PWRGD)
                                    bFirstPwrUp <= #TD bFirstPwrUp;
-                               else if(bFirstPwrUp == `FALSE)
+                               else if(!bFirstPwrUp)
                                         bFirstPwrUp <= #TD bFirstPwrUp;
                                     else
-                                        bFirstPwrUp <= #TD `FALSE;
+                                        bFirstPwrUp <= #TD 1'b0;
                  end
                  default: bFirstPwrUp <= #TD bFirstPwrUp;
              endcase
@@ -1009,15 +1087,17 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                          PrvBiosLed <= #TD PrvBiosLed;
                  end
                  `Event_BiosPost_Wait: begin // PwrEventState = 0xC
-                     if(bBiosPostRdySig == `TRUE)
+                     if(bBiosPostRdySig)
                          PrvBiosLed <= #TD PrvBiosLed;
-                     else if(CounterCnt < `EvtTimer_T64000)
-                              if(PrvBiosLed == BiosLed)
-                                  PrvBiosLed <= #TD PrvBiosLed;
-                              else
-                                  PrvBiosLed <= #TD BiosLed;
-                          else
+                     else if(bEnterBiosSetUpMenu)
                               PrvBiosLed <= #TD PrvBiosLed;
+                          else if(CounterCnt < `EvtTimer_T64000)
+                                   if(PrvBiosLed == BiosLed)
+                                       PrvBiosLed <= #TD PrvBiosLed;
+                                   else
+                                       PrvBiosLed <= #TD BiosLed;
+                               else
+                                   PrvBiosLed <= #TD PrvBiosLed;
                  end
                  default: PrvBiosLed <= #TD PrvBiosLed;
              endcase
@@ -1027,34 +1107,34 @@ end
 
 always @ (posedge CLK32768 or negedge ResetN) begin
     if(!ResetN)
-        bPwrFailUp <= #TD `FALSE;
+        bPwrFailUp <= #TD 1'b0;
     else if(Strobe1ms) // polling PwrEventState every 1ms after ResetN de-assertion
              case (PowerEvtState) // There are 13 PwrEventStates for polling cases
-                 `Event_InitPowerUp: bPwrFailUp <= #TD `FALSE; // PwrEventState = 0x0
-                 `Event_SLP_S3n: bPwrFailUp <= #TD `FALSE; // PwrEventState <= #TD 0xA
-                 `Event_PowerStandBy: bPwrFailUp <= #TD `FALSE; // PwrEventState = 0x1
+                 `Event_InitPowerUp: bPwrFailUp <= #TD 1'b0; // PwrEventState = 0x0
+                 `Event_SLP_S3n: bPwrFailUp <= #TD 1'b0; // PwrEventState <= #TD 0xA
+                 `Event_PowerStandBy: bPwrFailUp <= #TD 1'b0; // PwrEventState = 0x1
                  `Event_Reboot: begin // PwrEventState = 0x2
                      if(CounterCnt < `EvtTimer_T5000)
                          bPwrFailUp <= #TD bPwrFailUp;
-                     else if(ATX_PowerOK == `FALSE)
-                              bPwrFailUp <= #TD `TRUE;
+                     else if(!ATX_PowerOK)
+                              bPwrFailUp <= #TD 1'b1;
                           else
                               bPwrFailUp <= #TD bPwrFailUp;
                  end
                  `Event_UpdatePwrSt: begin // PwrEventState = 0x3
                      if(CounterCnt < `EvtTimer_T1050)
                          bPwrFailUp <= #TD bPwrFailUp;
-                     else if( ATX_PowerOK == `FALSE)
-                              bPwrFailUp <= #TD `TRUE;
+                     else if(!ATX_PowerOK)
+                              bPwrFailUp <= #TD 1'b1;
                           else
                               bPwrFailUp <= #TD bPwrFailUp;
                  end
                  `Event_PowerFail: begin // PwrEventState = 0x7
-                     if(CounterCnt < `EvtTimer_T1050)
+                     if(CounterCnt < `EvtTimer_T2000)
                          bPwrFailUp <= #TD bPwrFailUp;
-                     else if((CounterCnt > `EvtTimer_T1050) && (CounterCnt < `EvtTimer_T5000))
-                              if(ATX_PowerOK == `TRUE) // AC restored, reboot the system
-                                  bPwrFailUp <= #TD `TRUE;
+                     else if((CounterCnt > `EvtTimer_T2000) && (CounterCnt < `EvtTimer_T5000))
+                              if(ATX_PowerOK) // AC restored, reboot the system
+                                  bPwrFailUp <= #TD 1'b1;
                               else
                                   bPwrFailUp <= #TD bPwrFailUp;
                           else
@@ -1064,10 +1144,10 @@ always @ (posedge CLK32768 or negedge ResetN) begin
                  `Event_Wait2s: begin // PwrEventState = 0x8
                      if(CounterCnt < `EvtTimer_T6000)
                          bPwrFailUp <= #TD bPwrFailUp;
-                     else if(bPwrFailUp == `FALSE) // over 2 sec.
+                     else if(!bPwrFailUp) // over 2 sec.
                               bPwrFailUp <= #TD bPwrFailUp;
                           else
-                              bPwrFailUp <= #TD `FALSE;
+                              bPwrFailUp <= #TD 1'b0;
                  end
                  default: bPwrFailUp <= #TD bPwrFailUp;
              endcase
@@ -1079,37 +1159,24 @@ always @ (posedge CLK32768 or negedge ResetN) begin
     if(!ResetN)
         CounterCnt <= #TD 16'd0;
     else if(!Strobe1ms_d0)
-             if(CountState_N != CountState)
+             if(CountState)
                  if(!CountState_N)
                      CounterCnt <= #TD 16'd0;
                  else
                      CounterCnt <= #TD CounterCnt;
              else
                  CounterCnt <= #TD CounterCnt;
-         else if(CountState_N != CountState)
-                  case (CountState_N)
-                      1'b0: CounterCnt <= #TD 16'd0;
-                      1'b1: CounterCnt <= #TD CounterCnt + 16'd1;
-                  endcase
+         else if(CountState_N)
+                  CounterCnt <= #TD CounterCnt + 16'd1;
               else
-                  case (CountState)
-                      1'b0: CounterCnt <= #TD 16'd0;
-                      1'b1: CounterCnt <= #TD CounterCnt + 16'd1;
-                  endcase
+                  CounterCnt <= #TD 16'd0;
 end
 
 always @ (posedge CLK32768 or negedge ResetN) begin
     if(!ResetN)
         CountState <= #TD 1'b0;
-    else if(!Strobe1ms_d0)
-             if(CountState_N != CountState)
-                 CountState <= #TD CountState_N;
-             else
-                 CountState <= #TD CountState;
-         else if(CountState_N != CountState)
-                  CountState <= #TD CountState_N;
-              else
-                  CountState <= #TD CountState;
+    else
+        CountState <= #TD CountState_N;
 end
 
 always @ (posedge CLK32768 or negedge ResetN) begin

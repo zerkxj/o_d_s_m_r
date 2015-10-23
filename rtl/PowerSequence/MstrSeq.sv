@@ -56,13 +56,19 @@
     logic            rst_board_n; 
     logic            delay20ms_from_ps_on_rising ;
 	logic            cpu_pwrgd;
-	logic            psonpwrseq ;      
+	logic            psonpwrseq ;   
+    logic            st_fault_check ; 	
 //////////////////////////////////////////////////////////////////////////////	
     assign PwrEn = !pin.ibmc_pson_n  & 
                     pin.cpu_validcfg & 
                    !pin.pch_prsnt_n  & 
                    !fault | pin.slpS3_n ;       // pin.slpS3_n will be determined by PCH After_G3 bit when restoring AC power from G3.	
     assign pwrSeq.goOut_fltSt = (CurrentState == st_fault) && !pin.dbgmode_n; 
+`ifdef  ONLY_PowerUp	
+    assign st_fault_check =  pwrSeq.goOut_fltSt ;
+`else
+ 	assign st_fault_check =  pwrSeq.goOut_fltSt | pin.psonfrompwrevent ;
+`endif	
 //////////////////////////////////////////////////////////////////////////////    
 // Current State
 //////////////////////////////////////////////////////////////////////////////
@@ -91,8 +97,9 @@
     
       unique case( CurrentState )   
 
-         st_fault    : if( pwrSeq.goOut_fltSt )       NextState = st_STBY;
+         st_fault    : if( pwrSeq.goOut_fltSt )           NextState = st_STBY;
                        else                           NextState = st_fault;
+					   
 					   
          st_STBY     : if( fault )                    NextState = st_fault;
                        else if( pin.P3v3Aux_pwrgd )   NextState = st_off;  
@@ -143,25 +150,31 @@
                        else if( !PwrEn )              NextState = st_shutDown;
                        else if( !pin.slpS3_n )        NextState = st_shutDown;
                        else                           NextState = st_RESET; 
- 
+// Frank 09162015 add conditional check for measuring all onboard DC Power 
+`ifdef  Force_PowerUp					   
+         st_done     :                                NextState = st_done; 
+`else 		 
          st_done     : if ( !PwrEn )                  NextState = st_shutDown;  
                        else if( !pin.pch_pltrst_n )   NextState = st_RESET;					   
-                       else                           NextState = st_done;         
+                       else                           NextState = st_done;   
+`endif					   
 
          st_shutDown : if(!pwrSeq.CPU_PwrGD && (!pwrSeq.MEM_PwrGD | ( !pin.slpS3_n & pin.slpS4_n )) | fault)
                                                       NextState = st_PCH_off;
                        else if ( !pin.slpS3_n )       NextState = st_PCH_off;
-                       else                           NextState = st_shutDown;
+                       else                           NextState = st_shutDown;             
+                                                      
+					   
+        st_PCH_off  : if( !pwrSeq.PCH_PwrGD )         NextState = st_PS_off;
+                      else                            NextState = st_PCH_off;		 
 
-         st_PCH_off  : if( !pwrSeq.PCH_PwrGD )        NextState = st_PS_off;
-                       else                           NextState = st_PCH_off;
-
+  
          st_PS_off   : if( !pin.ps_pwrok && (!pin.slpS3_n & pin.slpS4_n) )
                                                       NextState = st_S3;
                        else if ( !pin.ps_pwrok && !pin.ibmc_pson_n && !pin.slpS3_n )
                                                       NextState = st_PS_off;
                        else if ( !pin.ps_pwrok )      NextState = st_off; 
-                       else                           NextState = st_PS_off;
+                       else                           NextState = st_PS_off; 	   
 					   
          default     :                                NextState = st_STBY;                          
       endcase 
@@ -180,54 +193,57 @@
 //////////////////////////////////////////////////////////////////////////////
     always_ff @( posedge pin.clk or negedge pin.rst_n ) begin 
     
-       if (  !pin.rst_n  ) begin            
-                  
-             
-//-          pin.ps_en            <= LOW;  
-             psonpwrseq           <= LOW ;  // Debug test 		   
-			 
-             pin.cpu_clken_n      <= LOW;                         
-             
+       if (  !pin.rst_n  ) begin
+             psonpwrseq           <= LOW; 			 
+             pin.cpu_clken_n      <= LOW;           
              pwrSeq.PCH_PwrMain   <= LOW;
              pwrSeq.MEM_PwrEN     <= LOW;
              pwrSeq.CPU_PwrEN     <= LOW;
              pin.pch_pwrok        <= LOW;             
-             cpu_pwrgd            <= LOW;      
-                     
+             cpu_pwrgd            <= LOW;                     
              pin.pch_syspwrok     <= LOW;
-
              rst_board_n          <= LOW;
        end
-       else begin         
-             
-//-          pin.ps_en            <= (CurrentState >= st_PS)  && (CurrentState < st_PS_off)   ?  HIGH : LOW;        
+       else begin     
              psonpwrseq           <= (CurrentState >= st_PS)  && (CurrentState < st_PS_off)   ?  HIGH : LOW;
 			 
              pin.cpu_clken_n      <= (CurrentState >= st_CPU_MEM)  && (CurrentState < st_PCH_off) ?  HIGH  : LOW;
            
              pwrSeq.PCH_PwrMain   <= (CurrentState >= st_PCH)      && (CurrentState < st_PCH_off)  ?  HIGH : LOW; 			 
             
-			 pwrSeq.MEM_PwrEN     <= (CurrentState >= st_CPU_MEM)  && (CurrentState < st_shutDown) ? HIGH : (!pin.slpS4_n ? LOW : pwrSeq.MEM_PwrEN);
-			    
+			 pwrSeq.MEM_PwrEN     <= (CurrentState >= st_CPU_MEM)  && (CurrentState < st_shutDown) ? HIGH : (!pin.slpS4_n ? LOW : pwrSeq.MEM_PwrEN);			    
 			 
-             pwrSeq.CPU_PwrEN     <= (CurrentState >= st_CPU_MEM)   && (CurrentState < st_shutDown) ?  HIGH : LOW;            
+             pwrSeq.CPU_PwrEN     <= (CurrentState >= st_CPU_MEM)   && (CurrentState < st_shutDown) ?  HIGH : LOW;
 
-//-          pin.pch_pwrok        <= ((CurrentState >= st_PWROK)    && (CurrentState < st_PCH_off)  ) ?  HIGH : LOW;
              pin.pch_pwrok        <= ((CurrentState >= st_PWROK)    && (CurrentState < st_PCH_off) &&  pin.bcm_p1v_pg && pin.bcm_p1va_pg ) ?  HIGH : LOW;			 
             	
              cpu_pwrgd            <= pin.pch_cpupwrgd;
                      
-             pin.pch_syspwrok     <= (CurrentState >=st_SYSPWROK)  && (CurrentState < st_shutDown) ?  HIGH : LOW;      
-                                   
+             pin.pch_syspwrok     <= (CurrentState >=st_SYSPWROK)  && (CurrentState < st_shutDown) ?  HIGH : LOW;                                    
              
              rst_board_n          <=   (CurrentState == st_done) ? HIGH:LOW; 
        end
     end      
  
-`ifdef  ONLY_PowerUp
-assign pin.ps_en = psonpwrseq  ;                         // Frank 07152015 for testing
+// Frank 09162015 add conditional check for measuring all onboard DC Power  
+////////////////////////////////////////////////////////////////////////////// 
+`ifdef    ONLY_PowerUp 
+assign pin.ps_en = psonpwrseq  ;                      
+`else
+`ifdef    Force_PowerUp 
+assign pin.ps_en = psonpwrseq  ;  
 `else 
-assign pin.ps_en = psonpwrseq  &  pin.psonfrompwrevent ; // Frank 07152015 for testing
+// Frank 08272015 : Integration of four bits PwrEventStates of PwrEvent.v  
+assign pin.ps_en =  ( psonpwrseq |  ( pin.powerevtstate == 4'b0010 )
+                                 |  ( pin.powerevtstate == 4'b0011 )
+								 |  ( pin.powerevtstate == 4'b0100 ) 
+								 |  ( pin.powerevtstate == 4'b0101 )
+							     |  ( pin.powerevtstate == 4'b0110 )
+								 |  ( pin.powerevtstate == 4'b0111 )
+								 |  ( pin.powerevtstate == 4'b1001 )
+								 |  ( pin.powerevtstate == 4'b1100 ) )
+								 &&   pin.psonfrompwrevent ; 	
+`endif 								 
 `endif 
 //////////////////////////////////////////////////////////////////////////////
    always_ff @( posedge pin.clk or negedge pin.rst_n ) begin 

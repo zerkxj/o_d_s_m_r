@@ -403,6 +403,7 @@ wire    [3:0]   PowerEvtState;
 
 wire            BiosFinished;
 wire            BiosPowerOff;
+wire            Shutdown;
 wire            ForceSwap;
 
 wire    [3:0]   InterruptButton;
@@ -604,8 +605,9 @@ PwrSequence
                    .FM_PLD_DEBUG3(FM_PLD_DEBUG3),               // Out
                    .FM_PLD_DEBUG4(FM_PLD_DEBUG4),               // Out
                    .FM_PLD_DEBUG5(FM_PLD_DEBUG5),               // Out
-//                   .PsonFromPwrEvent(PsonFromPwrEvent));        // In, Integration to MstrSeq.sv is not validated yet.
-                   .PsonFromPwrEvent(1'b1));        // In, Integration to MstrSeq.sv is not validated yet. // Carlos
+                   .PsonFromPwrEvent(PsonFromPwrEvent),         // In, Integration to MstrSeq.sv is not validated yet.
+//                   .PsonFromPwrEvent(1'b1),         // In, Integration to MstrSeq.sv is not validated yet. // Carlos
+                   .PowerEvtState(PowerEvtState));              //In,
 
 Lpc
     u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
@@ -749,7 +751,8 @@ PwrEvent
                 .ALL_PWRGD(PWRGD_CPUPWRGD),
                 .BiosLed(BIOS_LED_N),
                 .bCPUWrWdtRegSig(bCPUWrWdtRegSig),
-                .PowerOff(BiosPowerOff),
+                .BiosPowerOff(BiosPowerOff),
+                .Shutdown(1'b0),
 
                 .PowerEvtState(PowerEvtState),
                 .PowerbuttonEvtOut(PowerbuttonEvtOut),

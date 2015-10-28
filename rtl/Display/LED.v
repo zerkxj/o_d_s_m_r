@@ -29,6 +29,7 @@ module LED (
     ZippyStatus,            // In,
     SystemOK,               // In, System OK from regiser
     PowerSupplyOK,          // In,
+    BiosStatusCurrent,      // In, current BIOS status
     PSU1_Tach_Low,          // In,
     PSU1_Tach_High,         // In,
     PActivity,              // In,
@@ -37,6 +38,7 @@ module LED (
 
     SYS_LEDG_N,             // Out,
     SYS_LEDR_N,             // Out,
+    BIOS_LED_N,             // Out, BIOS LED
     PSU_Normal_N,           // Out,
     PSU_Fail_N,             // Out,
     FAN_LEDG_N,             // Out,
@@ -88,6 +90,7 @@ input   [7:0]   PSUFan_StReg;
 input   [2:1]   ZippyStatus;
 input           SystemOK;
 input           PowerSupplyOK;
+input           BiosStatusCurrent;
 input           PSU1_Tach_Low;
 input           PSU1_Tach_High;
 input   [1:0]   PActivity;
@@ -99,6 +102,7 @@ input   [1:0]   Speed2P;
 //--------------------------------------------------------------------------
 output          SYS_LEDG_N;
 output          SYS_LEDR_N;
+output  [1:0]   BIOS_LED_N;
 output  [1:0]   PSU_Normal_N;
 output  [1:0]   PSU_Fail_N;
 output          FAN_LEDG_N;
@@ -134,6 +138,8 @@ wire    [1:0]   RActivity;
 //------------------------------------------------------------------
 assign SYS_LEDG_N = (FM_PS_EN == `PwrSW_On) ? SystemOK : 1'b1;
 assign SYS_LEDR_N = (FM_PS_EN == `PwrSW_On) ? !SystemOK : 1'b1;
+assign BIOS_LED_N[0] = BiosStatusCurrent;
+assign BIOS_LED_N[1] = ~BiosStatusCurrent;
 assign PSU_Normal_N = (FM_PS_EN == `PwrSW_On) ? PowerNormal : 2'b11;
 assign PSU_Fail_N = (FM_PS_EN == `PwrSW_On) ? PowerFail : 2'b11;
 assign FAN_LEDG_N = (FM_PS_EN == `PwrSW_On) ? FanFail : 1'b1;

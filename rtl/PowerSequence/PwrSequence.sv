@@ -114,7 +114,8 @@ module PwrSequence
                 //  PsonFromPwrEvent 
                 // ----------------------------		
           
-    input   logic   PsonFromPwrEvent
+    input   logic   PsonFromPwrEvent, 
+	input   logic [3:0] PowerEvtState   // Frank 08132015 add
 );
 
 //////////////////////////////////////////////////////////////////////////////

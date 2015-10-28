@@ -1,129 +1,229 @@
-///////////////////////////////////////////////////////////////////
-// File name      : ButtonControl.v
-// Module name    : ButtonControl
-// Company        : Radware
-// Project name   : ODS-LS
-// Card name      : Yarkon
-// Designer       : Fedor Haikin
-// Creation Date  : 08.02.2011
-// Status         : Under design
-// Last modified  : 08.02.2011
-// Version        : 1.0
-// Description    : This module controls Power Button, System Reset Button
-// Hierarchy Up	  : ODSLS
-// Hierarchy Down : 
-// Card Release	  : 1.0
-///////////////////////////////////////////////////////////////////
-module ButtonControl(
-	MainReset,				// Power or Controller ICH10R Reset
-	SlowClock,				// Oscillator Clock 32,768 Hz
-	Strobe1s,				// Single SlowClock Pulse @ 1s
-	Strobe16ms,				// Single SlowClock Pulse @ 16 ms
-	Strobe125ms,			// Single SlowClock Pulse @ 125 ms
-	SysReset,				// Reset Button
-	PowerButtonIn,			// Power Button
-	WatchDogReset,			// System Watch Dog Reset Request
-	Interrupt,				// Power & Reset Interrupts and Button release
-	PowerButtonOut,			// Debounced Power Button
-	ResetOut				// Active Wide Strobe 4s after  the button pushed
-	);
-///////////////////////////////////////////////////////////////////
-input			MainReset, SlowClock, Strobe1s, Strobe16ms, Strobe125ms;
-input			SysReset, PowerButtonIn, WatchDogReset;
-output	[3:0]	Interrupt;
-output			PowerButtonOut, ResetOut;
-///////////////////////////////////////////////////////////////////
-wire			PowerInterrupt, PowerRelease;
-wire			ResetInterrupt, ResetRelease, ResetStrobe;
-///////////////////////////////////////////////////////////////////
-assign			Interrupt = {PowerInterrupt, PowerRelease, ResetInterrupt, ResetRelease};
-assign			ResetOut = ResetStrobe & !WatchDogReset;
-///////////////////////////////////////////////////////////////////
-Button #(.RST(1'b0)) PowerButton(
-	MainReset,			// Power or Controller ICH10R Reset
-	SlowClock,			// Oscillator Clock 32,768 Hz
-	Strobe16ms,			// Single SlowClock Pulse @ 16 ms
-	Strobe125ms,		// Single SlowClock Pulse @ 125 ms
-	PowerButtonIn,		// Button Input
-	PowerInterrupt,		// Single SlowClock Pulse 1s after the button pushed
-	PowerButtonOut,		// Debounced Power Button
-	PowerRelease		// Single SlowClock Pulse after the button released
-	);
-///////////////////////////////////////////////////////////////////
-Button #(.RST(1'b1)) ResetButton(
-	MainReset,			// Power or Controller ICH10R Reset
-	SlowClock,			// Oscillator Clock 32,768 Hz
-	Strobe16ms,			// Single SlowClock Pulse @ 16 ms
-	Strobe125ms,		// Single SlowClock Pulse @ 125 ms
-	SysReset,			// Button Input
-	ResetInterrupt,		// Single SlowClock Pulse 1s after the button pushed
-	ResetStrobe,		// Active Wide Strobe 4s after  the button pushed
-	ResetRelease		// Single SlowClock Pulse after the button released
-	);
-///////////////////////////////////////////////////////////////////
-endmodule
-///////////////////////////////////////////////////////////////////
-module Button(
-	MainReset,			// Power or Controller ICH10R Reset
-	SlowClock,			// Oscillator Clock 32,768 Hz
-	Strobe16ms,			// Single SlowClock Pulse @ 16 ms
-	Strobe125ms,		// Single SlowClock Pulse @ 125 ms
-	ButtonIn,			// Button Input
-	Interrupt,			// Single SlowClock Pulse 1s after the button pushed
-	StrobeOut,			// Active Wide Strobe 4s after  the button pushed
-	Release				// Single SlowClock Pulse after the button released
-	);
-///////////////////////////////////////////////////////////////////
-parameter		RST = 0;
-///////////////////////////////////////////////////////////////////
-input			MainReset, SlowClock, Strobe16ms, Strobe125ms;
-input			ButtonIn;
-output			Interrupt, Release, StrobeOut;
-///////////////////////////////////////////////////////////////////
-reg		[2:0]	Debounce;
-reg				Status, Interrupt, Strobe, Release;
-reg		[5:0]	Timer;
-///////////////////////////////////////////////////////////////////
-wire			Widest = Timer[5];
-///////////////////////////////////////////////////////////////////
-assign			StrobeOut = RST ? Strobe : Status;
-///////////////////////////////////////////////////////////////////
-initial
-begin
-    Debounce	= 0;
-    Status		= 0;
-    Interrupt	= 0;
-    Strobe		= 0;
-    Release		= 0;
-    Timer		= 0;
+//******************************************************************************
+// File name        : ButtonControl.v
+// Module name      : ButtonControl
+// Company          : Radware
+// Project name     : ODS-MR
+// Card name        : Yarkon
+// Designer         : Fedor Haikin
+// Creation Date    : 08.02.2011
+// Status           : Under design
+// Last modified    : 10.13.2015
+// Version          : 1.0
+// Description      : This module controls Power Button, System Reset Button
+// Hierarchy Up     : ODS_MR
+// Hierarchy Down   :
+// Card Release     : 1.0
+//******************************************************************************
+
+//------------------------------------------------------------------------------
+// Macro define or include file
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Module declaration
+//------------------------------------------------------------------------------
+module ButtonControl (
+    MainReset,              // In, Power or Controller ICH10R Reset
+    SlowClock,              // In, Oscillator Clock 32,768 Hz
+    Strobe1s,               // In, Single SlowClock Pulse @ 1s
+    Strobe16ms,             // In, Single SlowClock Pulse @ 16 ms
+    Strobe125ms,            // In, Single SlowClock Pulse @ 125 ms
+    SysReset,               // In, Reset Button
+    PowerButtonIn,          // In, Power Button
+    WatchDogReset,          // In, System Watch Dog Reset Request
+    PWRGD_PS_PWROK_3V3,     // In,
+    FM_PS_EN,               // In,
+    PowerbuttonEvt,         // In,
+    PowerEvtState,          // In,
+    Interrupt,              // Out, Power & Reset Interrupts and Button release
+    PowerButtonDebounce,    // Out, Debounced Power Button
+    ResetOut,               // Out, Active Wide Strobe 4s after  the button pushed
+    RstBiosFlg,             // Out,
+    FM_SYS_SIO_PWRBTN_N     // Out
+);
+
+//------------------------------------------------------------------------------
+// Parameter declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// User defined parameter
+//--------------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Standard parameter
+//--------------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Local parameter
+//--------------------------------------------------------------------------
+// time delay, flip-flop output assignment delay for simulation waveform trace
+localparam TD = 1;
+
+//------------------------------------------------------------------------------
+// Variable declaration
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Input/Output declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Input declaration
+//--------------------------------------------------------------------------
+input           MainReset;
+input           SlowClock;
+input           Strobe1s;
+input           Strobe16ms;
+input           Strobe125ms;
+input           SysReset;
+input           PowerButtonIn;
+input           WatchDogReset;
+input           PWRGD_PS_PWROK_3V3;
+input           FM_PS_EN;
+input           PowerbuttonEvt;
+input   [3:0]   PowerEvtState;
+
+//--------------------------------------------------------------------------
+// Output declaration
+//--------------------------------------------------------------------------
+output  [3:0]   Interrupt;
+output          PowerButtonDebounce;
+output          ResetOut;
+output          RstBiosFlg;
+output          FM_SYS_SIO_PWRBTN_N;
+
+//------------------------------------------------------------------------------
+// Signal declaration
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Wire declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational, module connection
+//----------------------------------------------------------------------
+wire            PowerInterrupt;
+wire            PowerRelease;
+wire            ResetInterrupt;
+wire            ResetRelease;
+wire            ResetStrobe;
+
+//--------------------------------------------------------------------------
+// Reg declaration
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Combinational
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Sequential
+//----------------------------------------------------------------------
+//------------------------------------------------------------------
+// Output
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------
+// Internal signal
+//------------------------------------------------------------------
+reg     [9:0]   PowerButtonInBuf;
+
+//------------------------------------------------------------------
+// FSM
+//------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Task/Function description and included task/function description
+//------------------------------------------------------------------------------
+// None
+
+//------------------------------------------------------------------------------
+// Main code
+//------------------------------------------------------------------------------
+//--------------------------------------------------------------------------
+// Combinational circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+assign Interrupt = {PowerInterrupt, PowerRelease, ResetInterrupt, ResetRelease};
+assign ResetOut = ResetStrobe & !WatchDogReset;
+assign RstBiosFlg = (PWRGD_PS_PWROK_3V3) ? 1'b0 :
+                        ((PowerEvtState == `Event_PowerStandBy) && (~PowerButtonIn)) ? 1'b1 :
+                            ((~PowerButtonInBuf[9]) && (FM_PS_EN == `PwrSW_Off)) ? 1'b1 : 1'b0;
+assign FM_SYS_SIO_PWRBTN_N = PowerButtonDebounce & PowerbuttonEvt;
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Sequential circuit
+//--------------------------------------------------------------------------
+//----------------------------------------------------------------------
+// Output
+//----------------------------------------------------------------------
+// None
+
+//----------------------------------------------------------------------
+// Internal signal
+//----------------------------------------------------------------------
+always @ (posedge Strobe125ms or negedge MainReset) begin
+    if(!MainReset)
+        PowerButtonInBuf <= #TD 10'd0;
+    else
+        PowerButtonInBuf <= #TD {PowerButtonInBuf[8:0], PowerButtonIn};
 end
 
-always	@(posedge SlowClock or negedge MainReset)
-  if(!MainReset)
-    begin
-      Debounce			<= 3'h7;
-      Status			<= 1;
-      Timer				<= 0;
-      Interrupt			<= 0;
-      Strobe			<= 1;
-      Release			<= 0;
-    end
-  else
-    begin
-      if(Strobe16ms)
-        begin
-          Debounce		<= {Debounce[1:0], ButtonIn};
-          Status		<= (Debounce == 3'h7) | Status & (Debounce != 3'h0);
-        end
-      if(Strobe125ms)
-        if(Status)
-          Timer			<= 6'h0;
-        else
-          Timer			<= Widest ? Timer : Timer + 1'b1;
-      Interrupt			<= (Timer == 6'h7) & Strobe125ms;
-      Strobe			<= (Timer != 6'h1F);
-      Release			<= (Debounce == 3'h7) & !Status & Strobe16ms;
-    end
-///////////////////////////////////////////////////////////////////
+//----------------------------------------------------------------------
+// FSM
+//----------------------------------------------------------------------
+// None
+
+//--------------------------------------------------------------------------
+// Module instantiation
+//--------------------------------------------------------------------------
+Button #(.RST(1'b0))
+    u_PowerButton(.MainReset(MainReset),        // In, Power or Controller ICH10R Reset
+                  .SlowClock(SlowClock),        // In, Oscillator Clock 32,768 Hz
+                  .Strobe16ms(Strobe16ms),      // In, Single SlowClock Pulse @ 16 ms
+                  .Strobe125ms(Strobe125ms),    // In, Single SlowClock Pulse @ 125 ms
+                  .ButtonIn(PowerButtonIn),     // In, Button Input
+                  .Interrupt(PowerInterrupt),   // Out, Single SlowClock Pulse 1s after the button pushed
+                  .StrobeOut(PowerButtonDebounce),   // Out, Active Wide Strobe 4s after the button pushed
+                  .Release(PowerRelease));      // Out, Single SlowClock Pulse after the button released
+
+Button #(.RST(1'b1))
+    u_ResetButton(.MainReset(MainReset),        // In, Power or Controller ICH10R Reset
+                  .SlowClock(SlowClock),        // In, Oscillator Clock 32,768 Hz
+                  .Strobe16ms(Strobe16ms),      // In, Single SlowClock Pulse @ 16 ms
+                  .Strobe125ms(Strobe125ms),    // In, Single SlowClock Pulse @ 125 ms
+                  .ButtonIn(SysReset),          // In, Button Input
+                  .Interrupt(ResetInterrupt),   // Out, Single SlowClock Pulse 1s after the button pushed
+                  .StrobeOut(ResetStrobe),      // Out, Active Wide Strobe 4s after the button pushed
+                  .Release(ResetRelease));      // Out, Single SlowClock Pulse after the button released
+
 endmodule
-///////////////////////////////////////////////////////////////////

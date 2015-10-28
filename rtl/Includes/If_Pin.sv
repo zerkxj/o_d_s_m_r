@@ -120,6 +120,7 @@
                 //  PsonFromPwrEvent 
                 // ----------------------------				
 			logic  psonfrompwrevent ; 	
+			logic  [3:0] powerevtstate ;  // Frank 08132015 add 
                 // ---------------------------- 
 				
        modport phy 
@@ -137,7 +138,8 @@
                    	cpld_debug0, 
 		            cnt1ms_done,     // not a physical pin	 
                     bcm_p1v_pg,   bcm_p1va_pg,
-   		  		    psonfrompwrevent,    // Not a physical pin 
+   		  		    psonfrompwrevent,    // Not a physical pin  
+					powerevtstate ,      // Frank 08132015 add 
 					
             input   ps_en, cpu_clken_n,  //- pwrbtn_n, Frank 06032015 mask
                     pch_apwrok,  pch_syspwrok,                      
@@ -163,7 +165,7 @@
 		            cpld_debug0,	
                     bcm_p1v_pg,  bcm_p1va_pg, 					
 			        psonfrompwrevent,         // Not a physical pin 
-					
+					powerevtstate ,      // Frank 08132015 add 
             output  ps_en, cpu_clken_n,  //- pwrbtn_n, Frank 06032015 mask 
                     pch_pwrok, pch_syspwrok,                     
                     cpu0_pwrgd,

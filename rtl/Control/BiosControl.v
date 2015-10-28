@@ -10,6 +10,7 @@ module BiosControl (
     ResetN,         // Power reset
     MainReset,      // Power or Controller ICH10R Reset
     LpcClock,       // 33 MHz Lpc (Altera Clock)
+    RstBiosFlg,     // In, Reset BIOS to BIOS0
     Write,          // Write Access to CPLD registor
     BiosCS,         // ICH10 BIOS Chip Select (SPI Interface)
     BIOS_SEL,       // BIOS SELECT  - Bios Select Jumper (default "1")
@@ -25,6 +26,7 @@ input           ResetN;
 input           MainReset;
 input           Write;
 input           LpcClock;
+input           RstBiosFlg;
 input           BiosCS;
 input           BIOS_SEL;
 input           SwapDisable;
@@ -55,8 +57,8 @@ assign WriteReg = Write & (RegAddress == 8'h04);
 always @ (posedge LpcClock or negedge ResetN) begin
     if(!ResetN) begin
         Edge <= 2'h3;
-        Start <= 0;
-        SetNext <= 0;
+        Start <= 1'b0;
+        SetNext <= 1'b0;
         Current_Bios <= 1'b0;
         Next_Bios <= 1'b1;
         Active_Bios <= 1'b0;

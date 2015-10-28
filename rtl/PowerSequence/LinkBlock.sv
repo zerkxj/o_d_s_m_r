@@ -120,7 +120,8 @@ module LinkBlock
                 //  PsonFromPwrEvent 
                 // ----------------------------		
           
-    input   logic   PsonFromPwrEvent
+    input   logic   PsonFromPwrEvent,
+	input   logic [3:0]  PowerEvtState   // Frank 08132015 add 
 );
     
 	 
@@ -267,6 +268,6 @@ module LinkBlock
          	
           
     assign  pin.psonfrompwrevent =  PsonFromPwrEvent ;  	
-
+    assign  pin.powerevtstate    =  PowerEvtState    ;  	 // Frank 08132015 add
 
 endmodule  // LinkBlock

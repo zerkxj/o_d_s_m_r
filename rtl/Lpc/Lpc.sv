@@ -20,6 +20,7 @@ module Lpc (
     LpcFrame,       // In, LPC Interface: Frame
     LpcBus,         // In, LPC Interface: Data Bus
     BiosStatus,     // In, BIOS status
+    IntReg,         // In, Interrupt register
 
     Wr,             // Out, LPC register wtite
     AddrReg,        // Out, register address
@@ -29,6 +30,7 @@ module Lpc (
     x7SegVal,       // Out, 7 Segment LED value
     WriteBiosWD,    // Out, BIOS watch dog register write
     BiosRegister,   // Out, BIOS watch dog register
+    IntRegister,    // Out, Interrupt register
     BiosPostData,   // Out, 80 port data
     FanLedCtrl,     // Out, Fan LED control register
     PSUFan_St       // Out, PSU Fan state register
@@ -69,6 +71,7 @@ input           LpcClock;
 input           LpcFrame;
 inout   [3:0]   LpcBus;
 input   [2:0]   BiosStatus;
+input   [6:4]   IntReg;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -81,6 +84,7 @@ output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output          WriteBiosWD;
 output  [7:0]   BiosRegister;
+output  [7:0]   IntRegister;
 output  [7:0]   BiosPostData;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
@@ -213,13 +217,15 @@ LpcReg
               .LpcClock(LpcClock),          // In, 33 MHz Lpc (LPC Clock)
               .Addr(AddrReg),               // In, register address
               .Wr(Wr),                      // In, write operation
-              .DataWr(DataWr),              // In, write data
+              .DataWrSW(DataWr),            // In, write data
               .BiosStatus(BiosStatus),      // In, BIOS status setup value
+              .IntReg(IntReg),              // In, Interrupt register setup value
               .DataReg(DataReg),            // Out, Register data
               .SystemOK(SystemOK),          // Out, System OK flag(software control)
               .x7SegSel(x7SegSel),          // Out, 7 segment LED select
               .x7SegVal(x7SegVal),          // Out, 7 segment LED value
               .BiosRegister(BiosRegister),  // Out, BIOS watch dog register
+              .IntRegister(IntRegister),    // Out, Interrupt register
               .FanLedCtrl(FanLedCtrl),      // Out, Fan LED control register
               .PSUFan_St(PSUFan_St));       // Out, PSU Fan state register
 

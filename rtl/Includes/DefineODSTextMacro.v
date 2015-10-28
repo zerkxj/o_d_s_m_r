@@ -11,6 +11,7 @@
 //`define SIMULATE_DESIGN 1
 //`define ODS_USE_UART    1
 //`define ODS_USE_I2C     1
+//`define DEBUG_PwrState 1
 
 `define BAR 16'h0800
 `define BAR80 16'h0080

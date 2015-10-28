@@ -32,7 +32,6 @@ module BiosWatchDog (
     PS_ONn,         // In,
     DPx,            // Out,
     Strobe125msec,  // In, Single LpcClock  Pulse @ 125 ms
-    WriteBiosWD,    // In, CPU (BIOS) writes to BIOS WD Register (#1)
     BiosRegister,   // In, Bios Watch Dog Control Register
     BiosFinished,   // Out, Bios Has been finished
     BiosPowerOff,   // Out, BiosWD Occurred, Force Power Off
@@ -73,7 +72,6 @@ input           SlowClock;
 input           LpcClock;
 input           MainReset;
 input           Strobe125msec;
-input           WriteBiosWD;
 input           PS_ONn;
 input   [7:0]   BiosRegister;
 
@@ -175,7 +173,7 @@ reg             Freeze;
 // Output
 //----------------------------------------------------------------------
 always @ (posedge LpcClock or negedge MainReset) begin
-    if(!MainReset)
+    if (!MainReset)
         if (!PS_ONn) begin
             BiosFinished <= #TD 1'b0;
             ForceSwap <= #TD 1'b0;
@@ -190,7 +188,7 @@ always @ (posedge LpcClock or negedge MainReset) begin
 end
 
 always @ (posedge SlowClock or negedge Reset)
-    if(!Reset)
+    if (!Reset)
         BiosPowerOff <= #TD 1'b0;
     else
         BiosPowerOff <= #TD BiosWatchDogReset;
@@ -199,7 +197,7 @@ always @ (posedge SlowClock or negedge Reset)
 // Internal signal
 //----------------------------------------------------------------------
 always @ (posedge LpcClock or negedge MainReset) begin
-    if(!MainReset)
+    if (!MainReset)
         if (!PS_ONn) begin
             BiosTimer <= #TD 10'd0;
             BiosTimer4sec <= #TD 6'd0;
@@ -219,10 +217,10 @@ always @ (posedge LpcClock or negedge MainReset) begin
         end
     else begin
         BiosTimer <= #TD DisableTimer ? BiosTimer :
-                         Strobe125msec ? (BiosTimer + 10'd1) : BiosTimer;
+                                        Strobe125msec ? (BiosTimer + 10'd1) : BiosTimer;
         BiosTimer4sec <= #TD Freeze ? BiosTimer4sec :
-                             (WriteBiosWD | DisableBiosWD) ? 6'h0 :
-                                 Strobe125msec ? (BiosTimer4sec + 6'd1) : BiosTimer4sec;
+                                      ((BiosRegister == 8'hAA)| DisableBiosWD) ? 6'h0 :
+                                                                                 Strobe125msec ? (BiosTimer4sec + 6'd1) : BiosTimer4sec;
         BiosWatchDogReset <= #TD BiosTimer[9] | BiosTimer4sec[5];
         Edge <= #TD BiosWatchDogReset;
         DisableBiosWD <= #TD ((BiosRegister == 8'h55) | (BiosRegister == 8'h29)) & (!BiosFinished);

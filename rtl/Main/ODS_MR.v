@@ -419,7 +419,7 @@ wire            bWrIntFlashPwrEvtCfg;
 wire            PwrLastStateWrBit;
 wire    [3:0]   EvpDbgP;
 
-wire            bCPUWrWdtRegSig;
+wire    [4:0]   bCPUWrWdtRegSig;
 
 wire    [6:4]   InterruptRegister;
 
@@ -606,8 +606,7 @@ PwrSequence
                    .FM_PLD_DEBUG4(FM_PLD_DEBUG4),               // Out
                    .FM_PLD_DEBUG5(FM_PLD_DEBUG5),               // Out
                    .PsonFromPwrEvent(PsonFromPwrEvent),         // In, Integration to MstrSeq.sv is not validated yet.
-//                   .PsonFromPwrEvent(1'b1),         // In, Integration to MstrSeq.sv is not validated yet. // Carlos
-                   .PowerEvtState(PowerEvtState));              //In,
+                   .PowerEvtState(PowerEvtState));              // In,
 
 Lpc
     u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
@@ -634,9 +633,9 @@ ClockSource
                    .Mclkx(CLK33M));             // Out, Clock Source output
 
 BiosControl
-    u_BiosControl (.ResetN(InitResetn),       // Power reset
-                   .MainReset(!MainResetN),    // Power or Controller ICH10R Reset
-                   .LpcClock(CLK33M),        // 33 MHz Lpc (Altera Clock)
+    u_BiosControl (.ResetN(InitResetn),         // Power reset
+                   .MainReset(!MainResetN),     // Power or Controller ICH10R Reset
+                   .LpcClock(CLK33M),           // 33 MHz Lpc (Altera Clock)
                    .RstBiosFlg(RstBiosFlg),     // In, Reset BIOS to BIOS0
                    .Write(Wr),                  // Write Access to CPLD registor
                    .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)
@@ -650,11 +649,11 @@ BiosControl
 
 HwResetGenerate
     u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N),                 // In, P3V3_AUX power on reset input
-                       .MCLKi(CLK33M),                           // In, 33MHz input
+                       .MCLKi(CLK33M),                              // In, 33MHz input
                        .RSMRST_N(RST_RSMRST_N),                     // In,
                        .PLTRST_N(RST_PLTRST_N),                     // In,
                        .Reset1G(1'b1),                              // In,
-                       .ResetOut_ox(ResetOut_ox),                          // In, From MR_Bsp, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
+                       .ResetOut_ox(ResetOut_ox),                   // In, reset button pressed and retained 4 second, ResetOut_ox will be asserted.
                        .FM_PS_EN(FM_PS_EN),                         // In,
 
                        .CLK32KHz(CLK32768),                         // Out, 32.768KHz output from a divider
@@ -715,7 +714,6 @@ BiosWatchDog
                     .PS_ONn(FM_PS_EN),              // In,
                     .DPx(),                         // Out,
                     .Strobe125msec(Strobe125msec),  // In, Single LpcClock  Pulse @ 125 ms
-                    .WriteBiosWD(WriteBiosWD),      // In, CPU (BIOS) writes to BIOS WD Register (#1)
                     .BiosRegister(BiosRegister),    // In, Bios Watch Dog Control Register
                     .BiosFinished(BiosFinished),    // Out, Bios Has been finished
                     .BiosPowerOff(BiosPowerOff),    // Out, BiosWD Occurred, Force Power Off

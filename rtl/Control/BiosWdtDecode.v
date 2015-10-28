@@ -150,7 +150,7 @@ reg             bCPUWdtAcsFlg;
 // Output
 //----------------------------------------------------------------------
 always @ (posedge CLK32768 or negedge MainResetN) begin
-    if(!MainResetN)
+    if (!MainResetN)
         bCPUWrWdtRegSig <= #TD 5'd0;
     else
         bCPUWrWdtRegSig <= #TD bCPUWriteWdtSig;
@@ -160,10 +160,10 @@ end
 // Internal signal
 //----------------------------------------------------------------------
 always @ (posedge Mclkx or negedge MainResetN) begin
-    if(!MainResetN)
+    if (!MainResetN)
         bCPUWriteWdtSig <= #TD 5'd0;
-    else if(WriteBiosWD)
-             if(!bCPUWdtAcsFlg)
+    else if (WriteBiosWD)
+             if (!bCPUWdtAcsFlg)
                  case (WrDev_Data)
                      8'h55: bCPUWriteWdtSig <= #TD {bCPUWriteWdtSig[4:1] , (~bCPUWriteWdtSig[0])};
                      8'h29: bCPUWriteWdtSig <= #TD {bCPUWriteWdtSig[4:2] ,(~bCPUWriteWdtSig[1]), bCPUWriteWdtSig[0]};
@@ -173,17 +173,16 @@ always @ (posedge Mclkx or negedge MainResetN) begin
                  endcase
              else
                  bCPUWriteWdtSig <= #TD bCPUWriteWdtSig;
-
          else
              bCPUWriteWdtSig <= #TD bCPUWriteWdtSig;
 end
 
 always @ (posedge Mclkx or negedge MainResetN) begin
-    if(!MainResetN)
+    if (!MainResetN)
         bCPUWdtAcsFlg <= #TD 1'b0;
-    else if(!WriteBiosWD)
+    else if (!WriteBiosWD)
              bCPUWdtAcsFlg <= #TD 1'b0;
-         else if(!bCPUWdtAcsFlg)
+         else if (!bCPUWdtAcsFlg)
                   bCPUWdtAcsFlg <= #TD 1'b1;
               else
                   bCPUWdtAcsFlg <= #TD bCPUWdtAcsFlg;

@@ -26,7 +26,9 @@ module LpcReg (
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 segment LED select
     x7SegVal,       // Out, 7 segment LED value
-    BiosRegister    // Out, BIOS watch dog register
+    BiosRegister,   // Out, BIOS watch dog register
+    FanLedCtrl,     // Out, Fan LED control register
+    PSUFan_St       // Out, PSU Fan state register
 );
 
 //------------------------------------------------------------------------------
@@ -74,6 +76,8 @@ output          SystemOK;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output  [7:0]   BiosRegister;
+output  [3:0]   FanLedCtrl;
+output  [7:0]   PSUFan_St;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -209,6 +213,8 @@ assign SystemOK = DataReg[8][6];
 assign x7SegSel = DataReg[14][4:0];
 assign x7SegVal = DataReg[15];
 assign BiosRegister = DataReg[1];
+assign FanLedCtrl = DataReg[27][3:0];
+assign PSUFan_St = DataReg[10];
 
 //----------------------------------------------------------------------
 // Internal signal

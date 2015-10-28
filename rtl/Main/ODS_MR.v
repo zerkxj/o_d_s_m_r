@@ -146,8 +146,8 @@ module ODS_MR (
     PSU_Fail_N,                     // Out,
     LED7_digit,                     // Out,
     LED7_SEG,                       // Out,
-    FAN_LEDR_N,                     // Out,
     FAN_LEDG_N,                     // Out,
+    FAN_LEDR_N,                     // Out,
     LED7_SEGDP,                     // Out,
     DMEControl,                     // Out,
     SYS_RST_IN_SIO_N,               // Out,
@@ -350,8 +350,8 @@ output  [1:0]   PSU_Normal_N;
 output  [1:0]   PSU_Fail_N;
 output  [5:0]   LED7_digit;
 output  [6:0]   LED7_SEG;
-output          FAN_LEDR_N;
 output          FAN_LEDG_N;
+output          FAN_LEDR_N;
 output          LED7_SEGDP;
 output  [5:0]   DMEControl;
 output          SYS_RST_IN_SIO_N;
@@ -385,6 +385,8 @@ wire    [2:0]   BiosStatus;
 wire            WriteBiosWD;
 wire    [7:0]   BiosRegister;
 wire    [7:0]   BiosPostData;
+wire    [3:0]   FanLedCtrl;
+wire    [7:0]   PSUFan_St;
 
 wire            CLK33M;
 
@@ -469,19 +471,7 @@ assign RST_BCM56842_N_R = RST_PLTRST_N;
 assign RST_1G_N_R = RST_PLTRST_N;
 assign RST_DME_N = RST_PLTRST_N;
 assign UNLOCK_BIOS_ME = 1'bz;
-assign CPLD_LAN_ACT_N[0] = (2'b11 == {LAN_LINK1000_N[0], LAN_LINK100_N[0]}) ? 1'b1 : ~LAN_ACT_N[0];
-assign CPLD_LAN_ACT_N[1] = (2'b11 == {LAN_LINK1000_N[1], LAN_LINK100_N[1]}) ? 1'b1 : ~LAN_ACT_N[1];
-assign CPLD_LAN_LINK1000_N[0] = LAN_LINK100_N[0];
-assign CPLD_LAN_LINK1000_N[1] = LAN_LINK100_N[1];
-assign CPLD_LAN_LINK100_N[0] = LAN_LINK1000_N[0];
-assign CPLD_LAN_LINK100_N[1] = LAN_LINK1000_N[1];
 
-assign SYS_LEDG_N = 1'b1;
-assign SYS_LEDR_N = 1'b1;
-assign PSU_Normal_N = 2'b11;
-assign PSU_Fail_N = 2'b11;
-assign FAN_LEDR_N = 1'b1;
-assign FAN_LEDG_N = 1'b1;
 assign DMEControl = 6'h00;
 assign SYS_RST_IN_SIO_N = 1'b1;
 assign CPLD_PCH_INT_N         =  1'b1;
@@ -599,20 +589,23 @@ PwrSequence
                    .PsonFromPwrEvent(1'b1));                    // In, Integration to MstrSeq.sv is not validated yet.
 
 Lpc
-    u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
-           .LpcClock(CLK33M),            // In, 33 MHz Lpc (LPC Clock)
-           .LpcFrame(LPC_FRAME_N),          // In, LPC Interface: Frame
-           .LpcBus(LPC_LAD),                // In, LPC Interface: Data Bus
-           .BiosStatus(BiosStatus),         // In, Bios status setup value
-           .Wr(Wr),                         // Out, LPC register wtite
-           .AddrReg(AddrReg),               // Out, register address
-           .DataWr(DataWr),                 // Out, register write data
-           .SystemOK(SystemOK),             // Out, System OK flag(software control)
-           .x7SegSel(x7SegSel),             // Out, 7 Segment LED select
-           .x7SegVal(x7SegVal),             // Out, 7 Segment LED value
-           .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
-           .BiosRegister(BiosRegister),     // Out, BIOS watch dog register
-           .BiosPostData(BiosPostData));    // Out, 80 port data
+    u_Lpc (.PciReset(RST_PLTRST_N),     // In, PCI Reset
+           .LpcClock(CLK33M),           // In, 33 MHz Lpc (LPC Clock)
+           .LpcFrame(LPC_FRAME_N),      // In, LPC Interface: Frame
+           .LpcBus(LPC_LAD),            // In, LPC Interface: Data Bus
+           .BiosStatus(BiosStatus),     // In, Bios status setup value
+
+           .Wr(Wr),                     // Out, LPC register wtite
+           .AddrReg(AddrReg),           // Out, register address
+           .DataWr(DataWr),             // Out, register write data
+           .SystemOK(SystemOK),         // Out, System OK flag(software control)
+           .x7SegSel(x7SegSel),         // Out, 7 Segment LED select
+           .x7SegVal(x7SegVal),         // Out, 7 Segment LED value
+           .WriteBiosWD(WriteBiosWD),   // Out, BIOS watch dog register write
+           .BiosRegister(BiosRegister), // Out, BIOS watch dog register
+           .BiosPostData(BiosPostData), // Out, 80 port data
+           .FanLedCtrl(FanLedCtrl),     // Out, Fan LED control register
+           .PSUFan_St(PSUFan_St));      // Out, PSU Fan state register
 
 ClockSource
     u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
@@ -706,5 +699,34 @@ BiosWatchDog
                   .BiosFinished(BiosFinished),      // Out, Bios Has been finished
                   .BiosPowerOff(BiosPowerOff),      // Out, BiosWD Occurred, Force Power Off
                   .ForceSwap(ForceSwap));           // Out, BiosWD Occurred, Force BIOS Swap while power restart
+
+LED
+    u_LED (.SlowClock(CLK32768),                            // In, Oscillator Clock 32,768 Hz
+           .Reset_N(InitResetn),                            // In, reset
+           .Strobe16ms(Strobe16ms),                         // In, Single SlowClock Pulse @ 16 ms
+           .Beep(GPIO15_FAN_Fail_N),                        // In, Fan Fail - 1, FanOK - 0; - has internal weak P/U
+           .FanLedCtrlReg(FanLedCtrl),                      // In, Fan LED control register
+           .FM_PS_EN(FM_PS_EN),                             // In,
+           .DualPS(DualPs),                                 // In, Dual power supply
+           .ALL_PWRGD(PWRGD_CPUPWRGD),                      // In,
+           .PSUFan_StReg(PSUFan_St),                        // In, Power supply FAN status register
+           .ZippyStatus({PSU_status[0], PSU_status[1]}),    // In,
+           .SystemOK(SystemOK),                             // In, System OK from regiser
+           .PowerSupplyOK(PWRGD_PS_PWROK_3V3),              // In,
+           .PSU1_Tach_Low(1'b1),                            // In,
+           .PSU1_Tach_High(1'b0),                           // In,
+           .PActivity(LAN_ACT_N),                           // In,
+           .Speed1P(LAN_LINK1000_N),                        // In,
+           .Speed2P(LAN_LINK100_N),                         // In,
+
+           .SYS_LEDG_N(SYS_LEDG_N),                     // Out,
+           .SYS_LEDR_N(SYS_LEDR_N),                     // Out,
+           .PSU_Normal_N(PSU_Normal_N),                 // Out,
+           .PSU_Fail_N(PSU_Fail_N),                     // Out,
+           .FAN_LEDG_N(FAN_LEDG_N),                     // Out,
+           .FAN_LEDR_N(FAN_LEDR_N),                     // Out,
+           .CPLD_LAN_LINK1000_N(CPLD_LAN_LINK1000_N),   // Out, LAN LINK 1000 LED
+           .CPLD_LAN_LINK100_N(CPLD_LAN_LINK100_N),     // Out, LAN LINK 100 LED
+           .CPLD_LAN_ACT_N(CPLD_LAN_ACT_N));            // Out, LAN ACTIVE LED
 
 endmodule  // end of ODS_MR,  top  module of this project

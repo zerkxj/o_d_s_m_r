@@ -1,38 +1,36 @@
 //******************************************************************************
-// File name      : FanDisplay.v
-// Module name    : FanDisplay
-// Company        : Radware
+// File name      : LanLED.v
+// Module name    : LanLED
+// Company        : CASwell
 // Project name   : ODS-MR
-// Card name      : Yarkon
-// Designer       : Fedor Haikin
-// Creation Date  : 12.04.2011
+// Card name      : Ethernet LED
+// Designer       : Frank Hsu
+// Creation Date  : May 8,2015
 // Status         : Under design
-// Last modified  : 10.26.2015
-// Version        : 1.0
-// Description    : This module controls FAN Status LED
-// Hierarchy Up   : ODS_MR
-// Hierarchy Down : -------
-// Card Release   : 1.0
+// Last modified  : Oct 25,2015
+//                :
+// Description    : This module controls the Giga Port Speed Leds Colour
+// Hierarchy Up   :
+// Hierarchy Down :
+// Card Release   :
 //******************************************************************************
 
 //------------------------------------------------------------------------------
 // Macro define or include file
 //------------------------------------------------------------------------------
-`define FANLedOff 2'b11
-`define FANLedRed 2'b10
-`define FANLedGreen 2'b01
+// None
 
 //------------------------------------------------------------------------------
 // Module declaration
 //------------------------------------------------------------------------------
-module FanLED (
-    SlowClock,      // In, Oscillator Clock 32,768 Hz
-    Reset_N,        // In, reset
-    Strobe16ms,     // In, Single SlowClock Pulse @ 16 ms
-    Beep,           // In, Fan Fail - 1, FanOK - 0; - has internal weak P/U
-    FanLedCtrlReg,  // In, Fan LED control register
-    FanFail,        // Out, Fan Led indication
-    FanOK           // Out, Fan Led indication
+module LanLED (
+    ALL_PWRGD,  // In, ALL POWER GOOD
+    PActivity,  // In, ACT#      signal from LAN controller
+    Speed1P,    // In, LINK1000# signal from LAN controller
+    Speed2P,    // In, LINK100#  signal from LAN controller
+    Speed1R,    // Out, LINK1000# output to BiColor LED
+    Speed2R,    // Out, LINK100#  output to BiColor LED
+    RActivity   // Out, ACT#      output to LED
 );
 
 //------------------------------------------------------------------------------
@@ -57,7 +55,7 @@ localparam TD = 1;
 //------------------------------------------------------------------------------
 // Variable declaration
 //------------------------------------------------------------------------------
-// None
+integer i_loop;
 
 //------------------------------------------------------------------------------
 // Input/Output declaration
@@ -65,17 +63,17 @@ localparam TD = 1;
 //--------------------------------------------------------------------------
 // Input declaration
 //--------------------------------------------------------------------------
-input           SlowClock;
-input           Reset_N;
-input           Strobe16ms;
-input           Beep;
-input   [3:0]   FanLedCtrlReg;
+input           ALL_PWRGD;
+input   [1:0]   PActivity;
+input   [1:0]   Speed1P;
+input   [1:0]   Speed2P;
 
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
-output          FanFail;
-output          FanOK;
+output  [1:0]   Speed1R;
+output  [1:0]   Speed2R;
+output  [1:0]   RActivity;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -86,7 +84,7 @@ output          FanOK;
 //----------------------------------------------------------------------
 // Combinational, module connection
 //----------------------------------------------------------------------
-wire            Fail;
+// None
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -97,16 +95,12 @@ wire            Fail;
 //------------------------------------------------------------------
 // Output
 //------------------------------------------------------------------
-reg             FanFail;
-reg             FanOK;
+reg     [1:0]   RActivity;
 
 //------------------------------------------------------------------
 // Internal signal
 //------------------------------------------------------------------
-reg             Tone;
-reg     [1:0]   Sample;
-reg             FanFailx;
-reg             FanOKx;
+// None
 
 //------------------------------------------------------------------
 // FSM
@@ -145,20 +139,34 @@ reg             FanOKx;
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-always @ (FanLedCtrlReg or FanOKx or FanFailx) begin
-    casex (FanLedCtrlReg)
-        4'bxxx0: {FanOK, FanFail} = {FanOKx, FanFailx};
-        4'bxx11: {FanOK, FanFail} = `FANLedOff;
-        4'bx111: {FanOK, FanFail} = `FANLedGreen;
-        4'b1111: {FanOK, FanFail} = `FANLedRed;
-        default: {FanOK, FanFail} = `FANLedOff;
-    endcase
+//LinkSpeedLEDs describe the link type of the GigaPhy
+//The table below gives the Link modes according to the SpeedLED status
+//|Speed1P:Speed2P| LinkMode       |Required LED Color|Speed1R:Speed2R|
+//|---------------|----------------|------------------|---------------|
+//|        00     | 1000BaseT Link |     Green        |        10     |
+//|        01     | 100BaseT Link  |     Orange       |        01     |
+//|        10     | 10BaseT Link   |     Orange       |        01     |
+//|        11     | NO Link        |     OFF          |        00     |
+//|---------------|----------------|------------------|---------------|
+assign Speed1R = ALL_PWRGD ? Speed2P: 2'b11;
+assign Speed2R = ALL_PWRGD ? Speed1P: 2'b11;
+
+always @ (ALL_PWRGD or Speed1P or Speed2P or PActivity) begin
+    for (i_loop=0; i_loop<2; i_loop=i_loop+1) begin
+        if (ALL_PWRGD)
+            if ({Speed1P[i_loop], Speed2P[i_loop]} == 2'b11)
+                RActivity[i_loop] = 1'b1;
+            else
+                RActivity[i_loop] = ~RActivity[i_loop];
+        else
+            RActivity[i_loop] = 1'b1;
+    end
 end
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-assign Fail = |Sample;
+// None
 
 //----------------------------------------------------------------------
 // FSM
@@ -176,28 +184,7 @@ assign Fail = |Sample;
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-always @ (negedge Reset_N or posedge SlowClock) begin
-    if (!Reset_N)
-        Sample <= #TD 2'd0;
-    else if (Tone)
-             Sample <= #TD 2'd3;
-         else if (Strobe16ms & Fail)
-                  Sample <= #TD Sample - 2'd1;
-              else
-                  Sample <= #TD Sample;
-end
-
-always @ (negedge Reset_N or posedge SlowClock) begin
-    if (!Reset_N) begin
-        Tone <= #TD 1'b0;
-        FanFailx <= #TD 1'b0;
-        FanOKx <= #TD 1'b0;
-    end else begin
-        Tone <= #TD Beep;
-        FanFailx <= #TD Fail;
-        FanOKx <= #TD !Fail;
-    end
-end
+// None
 
 //----------------------------------------------------------------------
 // FSM

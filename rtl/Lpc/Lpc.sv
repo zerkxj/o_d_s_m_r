@@ -20,6 +20,7 @@ module Lpc (
     LpcFrame,       // In, LPC Interface: Frame
     LpcBus,         // In, LPC Interface: Data Bus
     BiosStatus,     // In, BIOS status
+
     Wr,             // Out, LPC register wtite
     AddrReg,        // Out, register address
     DataWr,         // Out, register write data
@@ -28,7 +29,9 @@ module Lpc (
     x7SegVal,       // Out, 7 Segment LED value
     WriteBiosWD,    // Out, BIOS watch dog register write
     BiosRegister,   // Out, BIOS watch dog register
-    BiosPostData    // Out, 80 port data
+    BiosPostData,   // Out, 80 port data
+    FanLedCtrl,     // Out, Fan LED control register
+    PSUFan_St       // Out, PSU Fan state register
 );
 
 //------------------------------------------------------------------------------
@@ -79,6 +82,8 @@ output  [7:0]   x7SegVal;
 output          WriteBiosWD;
 output  [7:0]   BiosRegister;
 output  [7:0]   BiosPostData;
+output  [3:0]   FanLedCtrl;
+output  [7:0]   PSUFan_St;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -214,7 +219,9 @@ LpcReg
               .SystemOK(SystemOK),          // Out, System OK flag(software control)
               .x7SegSel(x7SegSel),          // Out, 7 segment LED select
               .x7SegVal(x7SegVal),          // Out, 7 segment LED value
-              .BiosRegister(BiosRegister)); // Out, BIOS watch dog register
+              .BiosRegister(BiosRegister),  // Out, BIOS watch dog register
+              .FanLedCtrl(FanLedCtrl),      // Out, Fan LED control register
+              .PSUFan_St(PSUFan_St));       // Out, PSU Fan state register
 
 LpcMux
     u_LpcMux (.PciReset(PciReset),      // In, PCI Reset

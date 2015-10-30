@@ -23,6 +23,8 @@ module LpcReg (
     DataWrSW,       // In, write data from SW
     BiosStatus,     // In, BIOS status setup value
     IntReg,         // In, Interrupt register setup value
+    FAN_PRSNT_N,    // In, FAN present status
+
     DataReg,        // Out, Register data
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 segment LED select
@@ -71,6 +73,7 @@ input           Wr;
 input   [7:0]   DataWrSW;
 input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
+input   [2:0]   FAN_PRSNT_N;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -226,9 +229,10 @@ assign PSUFan_St = DataReg[10];
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-always @ (Addr or DataWrSW or IntReg) begin
+always @ (Addr or DataWrSW or IntReg or FAN_PRSNT_N) begin
     case (Addr)
         8'h09: DataWr = {DataWrSW[7], IntReg, DataWrSW[3:0]};
+        8'h0C: DataWr = {DataWrSW[7:4], FAN_PRSNT_N, (&FAN_PRSNT_N)};
         default: DataWr = DataWrSW;
     endcase
 end

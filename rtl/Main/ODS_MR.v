@@ -605,6 +605,7 @@ Lpc
            .LpcBus(LPC_LAD),            // In, LPC Interface: Data Bus
            .BiosStatus(BiosStatus),     // In, Bios status setup value
            .IntReg(InterruptRegister),  // In, Interrupt register
+           .FAN_PRSNT_N(FAN_PRSNT_N),   // In, FAN present status
 
            .Wr(Wr),                     // Out, LPC register wtite
            .AddrReg(AddrReg),           // Out, register address

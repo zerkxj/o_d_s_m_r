@@ -21,6 +21,7 @@ module Lpc (
     LpcBus,         // In, LPC Interface: Data Bus
     BiosStatus,     // In, BIOS status
     IntReg,         // In, Interrupt register
+    FAN_PRSNT_N,    // In, FAN present status
 
     Wr,             // Out, LPC register wtite
     AddrReg,        // Out, register address
@@ -72,6 +73,7 @@ input           LpcFrame;
 inout   [3:0]   LpcBus;
 input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
+input   [2:0]   FAN_PRSNT_N;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -220,6 +222,8 @@ LpcReg
               .DataWrSW(DataWr),            // In, write data
               .BiosStatus(BiosStatus),      // In, BIOS status setup value
               .IntReg(IntReg),              // In, Interrupt register setup value
+              .FAN_PRSNT_N(FAN_PRSNT_N),    // In, FAN present status
+
               .DataReg(DataReg),            // Out, Register data
               .SystemOK(SystemOK),          // Out, System OK flag(software control)
               .x7SegSel(x7SegSel),          // Out, 7 segment LED select

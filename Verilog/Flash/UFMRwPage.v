@@ -1,17 +1,30 @@
-
-// Code Revision History : 
-// --------------------------------------------------------------------
-// Ver: | Author      |Mod. Date  |Changes Made:
-// V1.0 | Akhilesh    |09/09/11   |Initial Version
-// --------------------------------------------------------------------
-// Modified by Weikeng FAE Ethan 
-// 12.03.01.v01 -- Current only support read one page data
-//-----------------------------------------------------------------------
-
+//////////////////////////////////////////////////////////////////////////////
+// File name        : UFMRwPage.v
+// Module name      : UFMRwPage
+// Description      : This module R/W one page(16 bytes)of MXO2 UFM via a LPC-
+//                    to-WISHBONE master             
+// Hierarchy Up     : UFMRwPageDecode
+// Hierarchy Down   : efb
+////////////////////////////////////////////////////////////////////////////// 
+//  Notes :    
+//(1)efb.ipx ( Lattice IP and configuration code ) and efb.lpc must be located
+//  in the same directory. efb.ipx needs to be included as a source in Lattice
+//  Diamond PLD development tool. Double click efb.ipx could configure Lattice 
+//  EFB ( Embedded Function Block, supports embedded hardened cores for PLL, 
+//  I2C, SPI, Timer/Counter, UFM ( User Flash Memory ) via WISHBONE interface.)
+//  Strongly recommend to use 7MHz from Internal clock for WISHBONE interface.//     
+//(2)efb.v module will be automatically generated after the configuration 
+//  (
+//    automatically detect CPLD/FPGA device, 
+//    manually select WISHBONE clock frequency 
+//    manually initialize UFM pages with all_0 or specific data pattern 
+//   )
+//  in the same directory of efb.ipx in Lattice Diamond tool.     
+//(3)efb Module Instantiation
+//  Use original module name efb and instantiated name u1_efb.   
+/////////////////////////////////////////////////////////////////////////////
 `include "../Verilog/Includes/DefineEFBTextMacro.v" 
-
-// Frank 06302015 modify module name 
-// 
+// Frank 06302015 modify module name // 
 //- module UFM_WrRd(
 module UFMRwPage (
        input rst_n ,          
@@ -158,32 +171,29 @@ always @ (posedge clk_i or negedge rst_n)
 //***********************************************************************
 //* EFB Module Instantiation 
 //***********************************************************************
-// Frank 06302015 modify 
-//- efb u1_efb (
-EFBWishbone EFBWishbone (
+// Frank 08212015 modify , restore efb module name 
+efb u1_efb (
+//- EFBWishbone EFBWishbone (
     .wb_clk_i(clk_i  ), 
-		.wb_rst_i(!rst_n  ), .wb_cyc_i(wb_cyc_i ), .wb_stb_i(wb_stb_i  ), 
+	.wb_rst_i(!rst_n  ), .wb_cyc_i(wb_cyc_i ), .wb_stb_i(wb_stb_i  ), 
     .wb_we_i( wb_we_i), .wb_adr_i(wb_adr_i ), .wb_dat_i(wb_dat_i ), 
     .wb_dat_o( wb_dat_o),    
-    .wb_ack_o(wb_ack_o ),
-    //.i2c1_scl( ), .i2c1_sda( ), .i2c1_irqo( ),
+    .wb_ack_o(wb_ack_o ),   
     .wbc_ufm_irq( )
     );
-	
-    
 
 //***********************************************************************
 //*                                                                     *
-//* Data Read and Write Resgietr                                        *
+//* Data Read and Write Register                                        *
 //*                                                                     *
-//***********************************************************************/
+//***********************************************************************
 reg  [7:0] Page_RdData_r;
 assign Page_RdData = wb_dat_o; //131210.v01 Page_RdData_r;
 wire Is_RDDt_Sts;
 reg  [15:0] Rd_Dt_Cntr, Wr_Dt_Cntr;
 wire [7:0] Page_RdNum = Page_Num;
 wire Rd_Dt_CntrHit = (Rd_Dt_Cntr== (Page_RdNum*16-1) );
-//;131210.v01 add for Duap Port RAM
+//;131210.v01 add for Dual Port RAM
 assign Page_DtRead_Strb = //wb_stb_i & wb_ack_o & Page_Rd_Cyc;
                           Page_Rd_Cyc &  wb_ack_o & Is_RDDt_Sts; 
 assign Rd_Dt_Addrs = Rd_Dt_Cntr[7:0];	

@@ -34,7 +34,8 @@ module Lpc (
     IntRegister,    // Out, Interrupt register
     BiosPostData,   // Out, 80 port data
     FanLedCtrl,     // Out, Fan LED control register
-    PSUFan_St       // Out, PSU Fan state register
+    PSUFan_St,      // Out, PSU Fan state register
+    SpecialCmdReg   // Out, SW controled power shutdown register
 );
 
 //------------------------------------------------------------------------------
@@ -90,6 +91,7 @@ output  [7:0]   IntRegister;
 output  [7:0]   BiosPostData;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
+output  [7:0]   SpecialCmdReg;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -215,23 +217,24 @@ LpcControl
                   .LpcBus(LpcBus));     // Out, LPC Address Data
 
 LpcReg
-    u_LpcReg (.PciReset(PciReset),          // In, reset
-              .LpcClock(LpcClock),          // In, 33 MHz Lpc (LPC Clock)
-              .Addr(AddrReg),               // In, register address
-              .Wr(Wr),                      // In, write operation
-              .DataWrSW(DataWr),            // In, write data
-              .BiosStatus(BiosStatus),      // In, BIOS status setup value
-              .IntReg(IntReg),              // In, Interrupt register setup value
-              .FAN_PRSNT_N(FAN_PRSNT_N),    // In, FAN present status
+    u_LpcReg (.PciReset(PciReset),              // In, reset
+              .LpcClock(LpcClock),              // In, 33 MHz Lpc (LPC Clock)
+              .Addr(AddrReg),                   // In, register address
+              .Wr(Wr),                          // In, write operation
+              .DataWrSW(DataWr),                // In, write data
+              .BiosStatus(BiosStatus),          // In, BIOS status setup value
+              .IntReg(IntReg),                  // In, Interrupt register setup value
+              .FAN_PRSNT_N(FAN_PRSNT_N),        // In, FAN present status
 
-              .DataReg(DataReg),            // Out, Register data
-              .SystemOK(SystemOK),          // Out, System OK flag(software control)
-              .x7SegSel(x7SegSel),          // Out, 7 segment LED select
-              .x7SegVal(x7SegVal),          // Out, 7 segment LED value
-              .BiosRegister(BiosRegister),  // Out, BIOS watch dog register
-              .IntRegister(IntRegister),    // Out, Interrupt register
-              .FanLedCtrl(FanLedCtrl),      // Out, Fan LED control register
-              .PSUFan_St(PSUFan_St));       // Out, PSU Fan state register
+              .DataReg(DataReg),                // Out, Register data
+              .SystemOK(SystemOK),              // Out, System OK flag(software control)
+              .x7SegSel(x7SegSel),              // Out, 7 segment LED select
+              .x7SegVal(x7SegVal),              // Out, 7 segment LED value
+              .BiosRegister(BiosRegister),      // Out, BIOS watch dog register
+              .IntRegister(IntRegister),        // Out, Interrupt register
+              .FanLedCtrl(FanLedCtrl),          // Out, Fan LED control register
+              .PSUFan_St(PSUFan_St),            // Out, PSU Fan state register
+              .SpecialCmdReg(SpecialCmdReg));   // Out, SW controled power shutdown register
 
 LpcMux
     u_LpcMux (.PciReset(PciReset),      // In, PCI Reset

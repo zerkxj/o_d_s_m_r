@@ -32,7 +32,8 @@ module LpcReg (
     BiosRegister,   // Out, BIOS watch dog register
     IntRegister,    // Out, Interrupt register
     FanLedCtrl,     // Out, Fan LED control register
-    PSUFan_St       // Out, PSU Fan state register
+    PSUFan_St,      // Out, PSU Fan state register
+    SpecialCmdReg   // Out, SW controled power shutdown register
 );
 
 //------------------------------------------------------------------------------
@@ -86,6 +87,7 @@ output  [7:0]   BiosRegister;
 output  [7:0]   IntRegister;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
+output  [7:0]   SpecialCmdReg;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -225,6 +227,7 @@ assign BiosRegister = DataReg[1];
 assign IntRegister = DataReg[9];
 assign FanLedCtrl = DataReg[27][3:0];
 assign PSUFan_St = DataReg[10];
+assign SpecialCmdReg = DataReg[24];
 
 //----------------------------------------------------------------------
 // Internal signal

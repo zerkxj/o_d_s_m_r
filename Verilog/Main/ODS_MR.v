@@ -388,6 +388,7 @@ wire    [7:0]   DataIntReg;
 wire    [7:0]   BiosPostData;
 wire    [3:0]   FanLedCtrl;
 wire    [7:0]   PSUFan_St;
+wire    [7:0]   SpecialCmdReg;
 
 wire            CLK33M;
 
@@ -426,6 +427,14 @@ wire    [3:0]   EvpDbgP;
 wire    [4:0]   bCPUWrWdtRegSig;
 
 wire    [6:4]   InterruptRegister;
+
+wire    [31:0]  ufm_rd_data;
+
+wire            bDdualPSFlashReq;
+wire            bRdIntFlashDualPsCfg;
+wire            bWrIntFlashDualPsCfg;
+wire            DualPSCfgWrBit;
+wire    [2:0]   DualPSDbgP;
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -599,26 +608,27 @@ PwrSequence
                    .PowerEvtState(PowerEvtState));              // In,
 
 Lpc
-    u_Lpc (.PciReset(RST_PLTRST_N),     // In, PCI Reset
-           .LpcClock(CLK33M),           // In, 33 MHz Lpc (LPC Clock)
-           .LpcFrame(LPC_FRAME_N),      // In, LPC Interface: Frame
-           .LpcBus(LPC_LAD),            // In, LPC Interface: Data Bus
-           .BiosStatus(BiosStatus),     // In, Bios status setup value
-           .IntReg(InterruptRegister),  // In, Interrupt register
-           .FAN_PRSNT_N(FAN_PRSNT_N),   // In, FAN present status
+    u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
+           .LpcClock(CLK33M),               // In, 33 MHz Lpc (LPC Clock)
+           .LpcFrame(LPC_FRAME_N),          // In, LPC Interface: Frame
+           .LpcBus(LPC_LAD),                // In, LPC Interface: Data Bus
+           .BiosStatus(BiosStatus),         // In, Bios status setup value
+           .IntReg(InterruptRegister),      // In, Interrupt register
+           .FAN_PRSNT_N(FAN_PRSNT_N),       // In, FAN present status
 
-           .Wr(Wr),                     // Out, LPC register wtite
-           .AddrReg(AddrReg),           // Out, register address
-           .DataWr(DataWr),             // Out, register write data
-           .SystemOK(SystemOK),         // Out, System OK flag(software control)
-           .x7SegSel(x7SegSel),         // Out, 7 Segment LED select
-           .x7SegVal(x7SegVal),         // Out, 7 Segment LED value
-           .WriteBiosWD(WriteBiosWD),   // Out, BIOS watch dog register write
-           .BiosRegister(BiosRegister), // Out, BIOS watch dog register
-           .IntRegister(DataIntReg),    // Out, Interrupt register
-           .BiosPostData(BiosPostData), // Out, 80 port data
-           .FanLedCtrl(FanLedCtrl),     // Out, Fan LED control register
-           .PSUFan_St(PSUFan_St));      // Out, PSU Fan state register
+           .Wr(Wr),                         // Out, LPC register wtite
+           .AddrReg(AddrReg),               // Out, register address
+           .DataWr(DataWr),                 // Out, register write data
+           .SystemOK(SystemOK),             // Out, System OK flag(software control)
+           .x7SegSel(x7SegSel),             // Out, 7 Segment LED select
+           .x7SegVal(x7SegVal),             // Out, 7 Segment LED value
+           .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
+           .BiosRegister(BiosRegister),     // Out, BIOS watch dog register
+           .IntRegister(DataIntReg),        // Out, Interrupt register
+           .BiosPostData(BiosPostData),     // Out, 80 port data
+           .FanLedCtrl(FanLedCtrl),         // Out, Fan LED control register
+           .PSUFan_St(PSUFan_St),           // Out, PSU Fan state register
+           .SpecialCmdReg(SpecialCmdReg));  // Out,
 
 ClockSource
     u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
@@ -737,7 +747,7 @@ PwrEvent
                 .CLK32768(CLK32768),
                 .Strobe1ms(Strobe1ms),
                 .PowerbuttonIn(PWR_BTN_IN_N),
-                .PwrLastStateRdBit(1'b1),
+                .PwrLastStateRdBit(ufm_rd_data[0]),
                 .SLP_S3n(FM_SLPS3_N),
                 .ATX_PowerOK(PWRGD_PS_PWROK_3V3),
                 .ALL_PWRGD(PWRGD_CPUPWRGD),
@@ -805,5 +815,28 @@ LED
            .CPLD_LAN_LINK1000_N(CPLD_LAN_LINK1000_N),   // Out, LAN LINK 1000 LED
            .CPLD_LAN_LINK100_N(CPLD_LAN_LINK100_N),     // Out, LAN LINK 100 LED
            .CPLD_LAN_ACT_N(CPLD_LAN_ACT_N));            // Out, LAN ACTIVE LED
+
+UFMRwPageDecode
+    u_UFMRwPageDecode (.CLK_i(CLK33M),          // In, use for wishbone clock, so it should same as config in EFB of wishbone frequency
+                       .rst_n(InitResetn),          // In,
+                       .bWrPromCfg(bWrIntFlashPwrEvtCfg | bWrIntFlashDualPsCfg),     // In,
+                       .bRdPromCfg(bRdIntFlashPwrEvtCfg | bRdIntFlashDualPsCfg),     // In,
+                       .ufm_data_in({31'h7FFFFFFF, DualPSCfgWrBit, PwrLastStateWrBit}),    // In,
+
+                       .ufm_data_out(ufm_rd_data));    // Out,
+
+DualPSCfg
+    u_DualPSCfg (.ResetN(InitResetn),               // In,
+                 .CLK32768(CLK32768),               // In,
+                 .Strobe1ms(Strobe1ms),             // In,
+                 .SpecialCmdReg(SpecialCmdReg),     // In,
+                 .bPromBusy(bPowerEvtFlashReg),     // In,
+                 .DualPSCfgRdBit(ufm_rd_data[1]),   // In,
+
+                 .bFlashPromReq(bDdualPSFlashReq),  // Out,
+                 .bRdPromCfg(bRdIntFlashDualPsCfg), // Out,
+                 .bWrPromCfg(bWrIntFlashDualPsCfg), // Out,
+                 .DualPSCfgWrBit(DualPSCfgWrBit),   // Out,
+                 .DbgP(DualPSDbgP));                // Out,
 
 endmodule  // end of ODS_MR,  top  module of this project

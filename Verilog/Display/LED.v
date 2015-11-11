@@ -136,14 +136,14 @@ wire    [1:0]   RActivity;
 //------------------------------------------------------------------
 // Output
 //------------------------------------------------------------------
-assign SYS_LEDG_N = (FM_PS_EN == `PwrSW_On) ? SystemOK : 1'b1;
-assign SYS_LEDR_N = (FM_PS_EN == `PwrSW_On) ? !SystemOK : 1'b1;
+assign SYS_LEDG_N = (FM_PS_EN == `PwrSW_On) ? !SystemOK : 1'b1;
+assign SYS_LEDR_N = (FM_PS_EN == `PwrSW_On) ? SystemOK : 1'b1;
 assign BIOS_LED_N[0] = BiosStatusCurrent;
 assign BIOS_LED_N[1] = ~BiosStatusCurrent;
 assign PSU_Normal_N = (FM_PS_EN == `PwrSW_On) ? PowerNormal : 2'b11;
 assign PSU_Fail_N = (FM_PS_EN == `PwrSW_On) ? PowerFail : 2'b11;
-assign FAN_LEDG_N = (FM_PS_EN == `PwrSW_On) ? FanFail : 1'b1;
-assign FAN_LEDR_N = (FM_PS_EN == `PwrSW_On) ? FanOK : 1'b1;
+assign FAN_LEDG_N = (FM_PS_EN == `PwrSW_On) ? FanOK : 1'b1;
+assign FAN_LEDR_N = (FM_PS_EN == `PwrSW_On) ? FanFail : 1'b1;
 assign CPLD_LAN_LINK1000_N = (FM_PS_EN == `PwrSW_On) ? Speed1R : 2'b11;
 assign CPLD_LAN_LINK100_N = (FM_PS_EN == `PwrSW_On) ? Speed2R : 2'b11;
 assign CPLD_LAN_ACT_N = (FM_PS_EN == `PwrSW_On) ? RActivity : 2'b11;

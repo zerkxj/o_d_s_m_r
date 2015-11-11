@@ -148,7 +148,7 @@ function [7:0] ResetValue(input [7:0] addr,
 
     case (addr)
         8'h00: ResetValue = {`FPGAID_CODE , `VERSION_CODE};
-        8'h01: ResetValue = 8'h55; // R/W ( for Offset 0x01 ~ 0x1F )
+        8'h01: ResetValue = 8'hAA; // R/W ( for Offset 0x01 ~ 0x1F )
         8'h02: ResetValue = 8'hAA;
         8'h03: ResetValue = 8'h66;
         8'h04: ResetValue = {5'h00, BiosStatus};
@@ -156,9 +156,9 @@ function [7:0] ResetValue(input [7:0] addr,
         8'h06: ResetValue = 8'h88;
         8'h07: ResetValue = 8'h44;
         8'h08: ResetValue = 8'hBB;
-        8'h09: ResetValue = 8'h33;
+        8'h09: ResetValue = 8'h00;
         8'h0a: ResetValue = 8'hCC;
-        8'h0b: ResetValue = 8'h22;
+        8'h0b: ResetValue = 8'h00;
         8'h0c: ResetValue = 8'hDD;
         8'h0d: ResetValue = 8'h11;
         8'h0e: ResetValue = 8'hEE;

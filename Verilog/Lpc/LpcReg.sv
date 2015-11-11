@@ -157,12 +157,12 @@ function [7:0] ResetValue(input [7:0] addr,
         8'h07: ResetValue = 8'h44;
         8'h08: ResetValue = 8'hBB;
         8'h09: ResetValue = 8'h00;
-        8'h0a: ResetValue = 8'hCC;
-        8'h0b: ResetValue = 8'h00;
-        8'h0c: ResetValue = 8'hDD;
-        8'h0d: ResetValue = 8'h11;
-        8'h0e: ResetValue = 8'hEE;
-        8'h0f: ResetValue = 8'h00;
+        8'h0A: ResetValue = 8'hCC;
+        8'h0B: ResetValue = 8'h00;
+        8'h0C: ResetValue = 8'h00;
+        8'h0D: ResetValue = 8'h11;
+        8'h0E: ResetValue = 8'hEE;
+        8'h0F: ResetValue = 8'h00;
         8'h10: ResetValue = 8'hFF;
         8'h11: ResetValue = 8'h55;
         8'h12: ResetValue = 8'hAA;
@@ -173,12 +173,12 @@ function [7:0] ResetValue(input [7:0] addr,
         8'h17: ResetValue = 8'h44;
         8'h18: ResetValue = 8'hBB;
         8'h19: ResetValue = 8'h33;
-        8'h1a: ResetValue = 8'hCC;
-        8'h1b: ResetValue = 8'h22;
-        8'h1c: ResetValue = 8'hDD;
-        8'h1d: ResetValue = 8'h11;
-        8'h1e: ResetValue = 8'hEE;
-        8'h1f: ResetValue = 8'h5A;
+        8'h1A: ResetValue = 8'hCC;
+        8'h1B: ResetValue = 8'h22;
+        8'h1C: ResetValue = 8'hDD;
+        8'h1D: ResetValue = 8'h11;
+        8'h1E: ResetValue = 8'hEE;
+        8'h1F: ResetValue = 8'h5A;
         default: ResetValue = 8'h00;
     endcase
 
@@ -235,16 +235,17 @@ assign SpecialCmdReg = DataReg[24];
 always @ (Addr or DataWrSW or IntReg or FAN_PRSNT_N) begin
     case (Addr)
         8'h09: DataWr = {DataWrSW[7], IntReg, DataWrSW[3:0]};
-        8'h0C: DataWr = {DataWrSW[7:4], FAN_PRSNT_N, (&FAN_PRSNT_N)};
+        8'h0C: DataWr = {DataWrSW[7:3], ~FAN_PRSNT_N};
         default: DataWr = DataWrSW;
     endcase
 end
 
-always @ (DataReg[k] or IntReg) begin
+always @ (DataReg[k] or IntReg or FAN_PRSNT_N) begin
     for (loop=0; loop<32; loop=loop+1)
         case (loop)
             8'h09: DataWrHW[loop] = {DataReg[loop][7], IntReg,
                                      DataReg[loop][3:0]};
+            8'h0C: DataWrHW[loop] = {DataReg[7:3], ~FAN_PRSNT_N};
             default: DataWrHW[loop] = DataReg[loop];
         endcase
 end

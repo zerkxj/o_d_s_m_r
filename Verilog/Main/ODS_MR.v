@@ -137,7 +137,7 @@ module ODS_MR (
 
     DualPs,                         // In,
     PSU_status,                     // In,
-    BIOS_SEL,                       // In,
+    BIOS_SEL,                       // In, force select BIOS
     GPIO15_FAN_Fail_N,              // In,
     FAN_PRSNT_N,                    // In,
     SYS_LEDG_N,                     // Out
@@ -615,6 +615,10 @@ Lpc
            .BiosStatus(BiosStatus),         // In, Bios status setup value
            .IntReg(InterruptRegister),      // In, Interrupt register
            .FAN_PRSNT_N(FAN_PRSNT_N),       // In, FAN present status
+           .BIOS_SEL(BIOS_SEL),             // In, force select BIOS
+           .JP4(1'b0),                      // In, jumper 4, for future use
+           .PSU_status(PSU_status),         // In, power supply status
+           .Dual_Supply(ufm_rd_data[1]),    // In, Dual Supply status, save in SPI FLASH
 
            .Wr(Wr),                         // Out, LPC register wtite
            .AddrReg(AddrReg),               // Out, register address
@@ -792,10 +796,10 @@ LED
            .Beep(GPIO15_FAN_Fail_N),                        // In, Fan Fail - 1, FanOK - 0; - has internal weak P/U
            .FanLedCtrlReg(FanLedCtrl),                      // In, Fan LED control register
            .FM_PS_EN(FM_PS_EN),                             // In,
-           .DualPS(DualPs),                                 // In, Dual power supply
+           .DualPS(ufm_rd_data[1]),                         // In, Dual power supply
            .ALL_PWRGD(PWRGD_CPUPWRGD),                      // In,
            .PSUFan_StReg(PSUFan_St),                        // In, Power supply FAN status register
-           .ZippyStatus({PSU_status[0], PSU_status[1]}),    // In,
+           .ZippyStatus(PSU_status),                        // In,
            .SystemOK(SystemOK),                             // In, System OK from regiser
            .PowerSupplyOK(PWRGD_PS_PWROK_3V3),              // In,
            .BiosStatusCurrent(BiosStatus[2]),               // In, current BIOS status

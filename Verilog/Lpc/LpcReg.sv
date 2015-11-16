@@ -24,6 +24,10 @@ module LpcReg (
     BiosStatus,     // In, BIOS status setup value
     IntReg,         // In, Interrupt register setup value
     FAN_PRSNT_N,    // In, FAN present status
+    BIOS_SEL,       // In, force select BIOS
+    JP4,            // In, jumper 4, for future use
+    PSU_status,     // In, power supply status
+    Dual_Supply,    // In, Dual Supply status, save in SPI FLASH
 
     DataReg,        // Out, Register data
     SystemOK,       // Out, System OK flag(software control)
@@ -75,6 +79,10 @@ input   [7:0]   DataWrSW;
 input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
 input   [2:0]   FAN_PRSNT_N;
+input           BIOS_SEL;
+input           JP4;
+input   [5:4]   PSU_status;
+input           Dual_Supply;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -243,6 +251,9 @@ end
 always @ (DataReg[k] or IntReg or FAN_PRSNT_N) begin
     for (loop=0; loop<32; loop=loop+1)
         case (loop)
+            8'h08: DataWrHW[loop] = {Dual_Supply, DataReg[loop][6],
+                                     (~PSU_status), DataReg[loop][3:2], JP4,
+                                     BIOS_SEL};
             8'h09: DataWrHW[loop] = {DataReg[loop][7], IntReg,
                                      DataReg[loop][3:0]};
             8'h0C: DataWrHW[loop] = {DataReg[7:3], ~FAN_PRSNT_N};

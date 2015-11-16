@@ -22,6 +22,10 @@ module Lpc (
     BiosStatus,     // In, BIOS status
     IntReg,         // In, Interrupt register
     FAN_PRSNT_N,    // In, FAN present status
+    BIOS_SEL,       // In, force select BIOS
+    JP4,            // In, jumper 4, for future use
+    PSU_status,     // In, power supply status
+    Dual_Supply,    // In, Dual Supply status, save in SPI FLASH
 
     Wr,             // Out, LPC register wtite
     AddrReg,        // Out, register address
@@ -75,6 +79,10 @@ inout   [3:0]   LpcBus;
 input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
 input   [2:0]   FAN_PRSNT_N;
+input           BIOS_SEL;
+input           JP4;
+input   [5:4]   PSU_status;
+input           Dual_Supply;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -225,6 +233,10 @@ LpcReg
               .BiosStatus(BiosStatus),          // In, BIOS status setup value
               .IntReg(IntReg),                  // In, Interrupt register setup value
               .FAN_PRSNT_N(FAN_PRSNT_N),        // In, FAN present status
+              .BIOS_SEL(BIOS_SEL),              // In, force select BIOS
+              .JP4(JP4),                        // In, jumper 4, for future use
+              .PSU_status(PSU_status),          // In, power supply status
+              .Dual_Supply(Dual_Supply),        // In, Dual Supply status, save in SPI FLASH
 
               .DataReg(DataReg),                // Out, Register data
               .SystemOK(SystemOK),              // Out, System OK flag(software control)

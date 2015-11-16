@@ -217,10 +217,10 @@ always @ (DualPS or PSUFan_StReg[0] or PSUFan_StReg[4] or PSUFan_StReg[6] or
                  {PowerNormal[1], PowerFail[1]} = `PSULedOff;
              else if (!PSUFan_StReg[6])
                       {PowerNormal[1], PowerFail[1]} = `PSULedRed;
-                  else if (!ZippyStatus[1])
-                           {PowerNormal[1], PowerFail[1]} = `PSULedRed;
-                       else
+                  else if (ZippyStatus[1])
                            {PowerNormal[1], PowerFail[1]} = `PSULedGreen;
+                       else
+                           {PowerNormal[1], PowerFail[1]} = `PSULedRed;
          else if (ZippyStatus[1])
                   {PowerNormal[1], PowerFail[1]} = `PSULedGreen;
               else if (!PowerSupplyOK)
@@ -241,22 +241,22 @@ always @ (DualPS or PSUFan_StReg[0] or PSUFan_StReg[5] or PSUFan_StReg[7] or
              else if (!PSUFan_StReg[7])
                       {PowerNormal[2], PowerFail[2]} = `PSULedRed;
                   else if (ZippyStatus[2])
-                           {PowerNormal[2], PowerFail[2]} = `PSULedRed;
-                       else
                            {PowerNormal[2], PowerFail[2]} = `PSULedGreen;
+                       else
+                           {PowerNormal[2], PowerFail[2]} = `PSULedRed;
     else if (!PSUFan_StReg[0])
-             if (!ZippyStatus[2])
-                 {PowerNormal[2], PowerFail[2]} = `PSULedRed;
-             else
+             if (ZippyStatus[2])
                  {PowerNormal[2], PowerFail[2]} = `PSULedGreen;
+             else
+                 {PowerNormal[2], PowerFail[2]} = `PSULedRed;
          else if (PSUFan_StReg[5])
                   {PowerNormal[2], PowerFail[2]} = `PSULedOff;
               else if (!PSUFan_StReg[7])
                        {PowerNormal[2], PowerFail[2]} = `PSULedRed;
-                   else if (!ZippyStatus[2])
-                            {PowerNormal[2], PowerFail[2]} = `PSULedRed;
-                        else
+                   else if (ZippyStatus[2])
                             {PowerNormal[2], PowerFail[2]} = `PSULedGreen;
+                        else
+                            {PowerNormal[2], PowerFail[2]} = `PSULedRed;
 end
 
 

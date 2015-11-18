@@ -39,7 +39,9 @@ module Lpc (
     BiosPostData,   // Out, 80 port data
     FanLedCtrl,     // Out, Fan LED control register
     PSUFan_St,      // Out, PSU Fan state register
-    SpecialCmdReg   // Out, SW controled power shutdown register
+    SpecialCmdReg,  // Out, SW controled power shutdown register
+    Shutdown,       // Out, SW shutdown command
+    SwapBios        // Out, Swap BIOS by SW shutdown command
 );
 
 //------------------------------------------------------------------------------
@@ -100,6 +102,8 @@ output  [7:0]   BiosPostData;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
 output  [7:0]   SpecialCmdReg;
+output          Shutdown;
+output          SwapBios;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -143,12 +147,13 @@ wire    [7:0]   DataReg [31:0];
 //------------------------------------------------------------------
 // Output
 //------------------------------------------------------------------
-// None
+reg             Shutdown;
+reg             SwapBios;
 
 //------------------------------------------------------------------
 // Internal signal
 //------------------------------------------------------------------
-// None
+reg             Shutdown_d; // Shutdown delay 1T
 
 //------------------------------------------------------------------
 // FSM
@@ -187,12 +192,28 @@ assign WriteBiosWD = Wr & (AddrReg == 8'h01);
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-// None
+always @ (posedge LpcClock or negedge PciReset) begin
+    if (!PciReset)
+        Shutdown <= #TD 1'b0;
+    else
+        Shutdown <= #TD (SpecialCmdReg == 8'h53);
+end
+always @ (posedge LpcClock or negedge PciReset) begin
+    if (!PciReset)
+        SwapBios <= #TD 1'b0;
+    else
+        SwapBios <= #TD ({Shutdown_d, Shutdown} == 2'b01);
+end
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-// None
+always @ (posedge LpcClock or negedge PciReset) begin
+    if (!PciReset)
+        Shutdown_d <= #TD 1'b0;
+    else
+        Shutdown_d <= #TD Shutdown;
+end
 
 //----------------------------------------------------------------------
 // FSM

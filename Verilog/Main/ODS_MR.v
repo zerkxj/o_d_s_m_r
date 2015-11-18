@@ -389,6 +389,8 @@ wire    [7:0]   BiosPostData;
 wire    [3:0]   FanLedCtrl;
 wire    [7:0]   PSUFan_St;
 wire    [7:0]   SpecialCmdReg;
+wire            Shutdown;
+wire            SwapBios;
 
 wire            CLK33M;
 
@@ -408,7 +410,6 @@ wire    [3:0]   PowerEvtState;
 
 wire            BiosFinished;
 wire            BiosPowerOff;
-wire            Shutdown;
 wire            ForceSwap;
 
 wire    [3:0]   InterruptButton;
@@ -608,7 +609,7 @@ PwrSequence
                    .PowerEvtState(PowerEvtState));              // In,
 
 Lpc
-    u_Lpc (.PciReset(RST_PLTRST_N),         // In, PCI Reset
+    u_Lpc (.PciReset(MainResetN),         // In, PCI Reset
            .LpcClock(CLK33M),               // In, 33 MHz Lpc (LPC Clock)
            .LpcFrame(LPC_FRAME_N),          // In, LPC Interface: Frame
            .LpcBus(LPC_LAD),                // In, LPC Interface: Data Bus
@@ -632,7 +633,9 @@ Lpc
            .BiosPostData(BiosPostData),     // Out, 80 port data
            .FanLedCtrl(FanLedCtrl),         // Out, Fan LED control register
            .PSUFan_St(PSUFan_St),           // Out, PSU Fan state register
-           .SpecialCmdReg(SpecialCmdReg));  // Out,
+           .SpecialCmdReg(SpecialCmdReg),   // Out,
+           .Shutdown(Shutdown),             // Out, SW shutdown command
+           .SwapBios(SwapBios));            // Out, Swap BIOS by SW shutdown command
 
 ClockSource
     u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
@@ -641,19 +644,19 @@ ClockSource
                    .Mclkx(CLK33M));             // Out, Clock Source output
 
 BiosControl
-    u_BiosControl (.ResetN(InitResetn),         // Power reset
-                   .MainReset(!MainResetN),     // Power or Controller ICH10R Reset
-                   .LpcClock(CLK33M),           // 33 MHz Lpc (Altera Clock)
-                   .RstBiosFlg(RstBiosFlg),     // In, Reset BIOS to BIOS0
-                   .Write(Wr),                  // Write Access to CPLD registor
-                   .BiosCS(SPI_PCH_CS0_N),      // ICH10 BIOS Chip Select (SPI Interface)
-                   .BIOS_SEL(BIOS_SEL),         // BIOS SELECT  - Bios Select Jumper (default "1")
-                   .SwapDisable(1'b0),          // Disable BIOS Swapping after Power Up
-                   .ForceSwap(2'b00),           // BiosWD Occurred, Force BIOS Swap while power restart
-                   .RegAddress(AddrReg),        // Address of the accessed Register
-                   .DataWr(DataWr),             // Data to be written to CPLD Register
-                   .BIOS(BIOS_CS_N),            // Chip Select to SPI Flash Memories
-                   .BiosStatus(BiosStatus));    // BIOS status
+    u_BiosControl (.ResetN(InitResetn),                 // Power reset
+                   .MainReset(!MainResetN),             // Power or Controller ICH10R Reset
+                   .LpcClock(CLK33M),                   // 33 MHz Lpc (Altera Clock)
+                   .RstBiosFlg(RstBiosFlg),             // In, Reset BIOS to BIOS0
+                   .Write(Wr),                          // Write Access to CPLD registor
+                   .BiosCS(SPI_PCH_CS0_N),              // ICH10 BIOS Chip Select (SPI Interface)
+                   .BIOS_SEL(BIOS_SEL),                 // BIOS SELECT  - Bios Select Jumper (default "1")
+                   .SwapDisable(1'b0),                  // Disable BIOS Swapping after Power Up
+                   .ForceSwap({ForceSwap, SwapBios}),   // BiosWD Occurred, Force BIOS Swap while power restart
+                   .RegAddress(AddrReg),                // Address of the accessed Register
+                   .DataWr(DataWr),                     // Data to be written to CPLD Register
+                   .BIOS(BIOS_CS_N),                    // Chip Select to SPI Flash Memories
+                   .BiosStatus(BiosStatus));            // BIOS status
 
 HwResetGenerate
     u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N),                 // In, P3V3_AUX power on reset input
@@ -758,7 +761,7 @@ PwrEvent
                 .BiosLed(BIOS_LED_N),
                 .bCPUWrWdtRegSig(bCPUWrWdtRegSig),
                 .BiosPowerOff(BiosPowerOff),
-                .Shutdown(1'b0),
+                .Shutdown(Shutdown),
 
                 .PowerEvtState(PowerEvtState),
                 .PowerbuttonEvtOut(PowerbuttonEvtOut),

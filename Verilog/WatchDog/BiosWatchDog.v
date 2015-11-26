@@ -187,11 +187,12 @@ always @ (posedge LpcClock or negedge MainReset) begin
     end
 end
 
-always @ (posedge SlowClock or negedge Reset)
+always @ (posedge SlowClock or negedge Reset) begin
     if (!Reset)
         BiosPowerOff <= #TD 1'b0;
     else
         BiosPowerOff <= #TD BiosWatchDogReset;
+end
 
 //----------------------------------------------------------------------
 // Internal signal
@@ -201,11 +202,11 @@ always @ (posedge LpcClock or negedge MainReset) begin
         if (!PS_ONn) begin
             BiosTimer <= #TD 10'd0;
             BiosTimer4sec <= #TD 6'd0;
-            BiosWatchDogReset <= #TD 0;
-            Edge <= #TD 0;
-            DisableBiosWD <= #TD 0;
-            DisableTimer <= #TD 0;
-            Freeze <= #TD 0;
+            BiosWatchDogReset <= #TD 1'b0;
+            Edge <= #TD 1'b0;
+            DisableBiosWD <= #TD 1'b0;
+            DisableTimer <= #TD 1'b0;
+            Freeze <= #TD 1'b0;
         end else begin
             BiosTimer <= #TD BiosTimer;
             BiosTimer4sec <= #TD BiosTimer4sec;

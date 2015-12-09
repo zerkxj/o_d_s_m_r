@@ -179,7 +179,7 @@ function [7:0] ResetValue(input [7:0] addr,
         8'h15: ResetValue = 8'h77;
         8'h16: ResetValue = 8'h88;
         8'h17: ResetValue = 8'h44;
-        8'h18: ResetValue = 8'hBB;
+        8'h18: ResetValue = 8'h00;
         8'h19: ResetValue = 8'h33;
         8'h1A: ResetValue = 8'hCC;
         8'h1B: ResetValue = 8'h22;
@@ -256,7 +256,7 @@ always @ (DataReg[k] or IntReg or FAN_PRSNT_N) begin
                                      BIOS_SEL};
             8'h09: DataWrHW[loop] = {DataReg[loop][7], IntReg,
                                      DataReg[loop][3:0]};
-            8'h0C: DataWrHW[loop] = {DataReg[7:3], ~FAN_PRSNT_N};
+            8'h0C: DataWrHW[loop] = {DataReg[loop][7:3], ~FAN_PRSNT_N};
             default: DataWrHW[loop] = DataReg[loop];
         endcase
 end

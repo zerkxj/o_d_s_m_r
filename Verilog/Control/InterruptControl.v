@@ -165,7 +165,7 @@ assign ResetEvent = ATX ? Interrupt[0] : Interrupt[1];
 assign PowerEvent = ATX ? Interrupt[2] : Interrupt[3];
 assign WrRegInt = Wr & (Addr == 8'h09);
 assign ClearInterrupt = DataWr[6:4] & {3{WrRegInt}};
-assign IREQWatchDog = WatchDogIREQ | DataIntReg[6] & (!ClearInterrupt[6]);
+assign IREQWatchDog = WatchDogIREQ | DataIntReg[6];
 assign IREQResetButton = ResetEvent | DataIntReg[5] & (!ClearInterrupt[5]);
 assign IREQPwrButton = PowerEvent | DataIntReg[4] & (!ClearInterrupt[4]);
 assign InterruptRequest = |({IREQWatchDog, IREQResetButton, IREQPwrButton} &

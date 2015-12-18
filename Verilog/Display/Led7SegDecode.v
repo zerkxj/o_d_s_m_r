@@ -403,9 +403,9 @@ always @ (posedge Mclk or negedge ResetN) begin
         xStrobe1ms <= #TD `LOW;
         bStrobe1ms <= #TD `LOW;
     end else begin
-            xStrobe1ms <= #TD Strobe1ms;
-            bStrobe1ms <= #TD xStrobe1ms;
-        end
+        xStrobe1ms <= #TD Strobe1ms;
+        bStrobe1ms <= #TD xStrobe1ms;
+    end
 end
 
 always @ (posedge Mclk or negedge ResetN) begin

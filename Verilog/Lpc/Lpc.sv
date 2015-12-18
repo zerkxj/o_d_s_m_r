@@ -15,17 +15,19 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module Lpc (
-    PciReset,       // In, PCI Reset
-    LpcClock,       // In, 33 MHz Lpc (LPC Clock)
-    LpcFrame,       // In, LPC Interface: Frame
-    LpcBus,         // In, LPC Interface: Data Bus
-    BiosStatus,     // In, BIOS status
-    IntReg,         // In, Interrupt register
-    FAN_PRSNT_N,    // In, FAN present status
-    BIOS_SEL,       // In, force select BIOS
-    JP4,            // In, jumper 4, for future use
-    PSU_status,     // In, power supply status
-    Dual_Supply,    // In, Dual Supply status, save in SPI FLASH
+    PciReset,           // In, PCI Reset
+    LpcClock,           // In, 33 MHz Lpc (LPC Clock)
+    LpcFrame,           // In, LPC Interface: Frame
+    LpcBus,             // In, LPC Interface: Data Bus
+    BiosStatus,         // In, BIOS status
+    IntReg,             // In, Interrupt register
+    FAN_PRSNT_N,        // In, FAN present status
+    BIOS_SEL,           // In, force select BIOS
+    JP4,                // In, jumper 4, for future use
+    PSU_status,         // In, power supply status
+    Dual_Supply,        // In, Dual Supply status, save in SPI FLASH
+    WatchDogOccurred,   // In, occurr watch dog reset
+    WatchDogIREQ,       // In, watch dog interrupt request
 
     Wr,             // Out, LPC register wtite
     AddrReg,        // Out, register address
@@ -36,12 +38,14 @@ module Lpc (
     WriteBiosWD,    // Out, BIOS watch dog register write
     BiosRegister,   // Out, BIOS watch dog register
     IntRegister,    // Out, Interrupt register
+    WatchDogReg,    // Out, Watch Dog register
     BiosPostData,   // Out, 80 port data
     FanLedCtrl,     // Out, Fan LED control register
     PSUFan_St,      // Out, PSU Fan state register
     SpecialCmdReg,  // Out, SW controled power shutdown register
     Shutdown,       // Out, SW shutdown command
-    SwapBios        // Out, Swap BIOS by SW shutdown command
+    SwapBios,       // Out, Swap BIOS by SW shutdown command
+    LoadWDTimer     // Out, Load watch dog timer
 );
 
 //------------------------------------------------------------------------------
@@ -85,6 +89,8 @@ input           BIOS_SEL;
 input           JP4;
 input   [5:4]   PSU_status;
 input           Dual_Supply;
+input           WatchDogOccurred;
+input           WatchDogIREQ;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -98,12 +104,14 @@ output  [7:0]   x7SegVal;
 output          WriteBiosWD;
 output  [7:0]   BiosRegister;
 output  [7:0]   IntRegister;
+output  [7:0]   WatchDogReg;
 output  [7:0]   BiosPostData;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
 output  [7:0]   SpecialCmdReg;
 output          Shutdown;
 output          SwapBios;
+output          LoadWDTimer;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -175,6 +183,7 @@ reg             Shutdown_d; // Shutdown delay 1T
 // Output
 //----------------------------------------------------------------------
 assign WriteBiosWD = Wr & (AddrReg == 8'h01);
+assign LoadWDTimer = Wr & (AddrReg == 8'h0B);
 
 //----------------------------------------------------------------------
 // Internal signal
@@ -246,18 +255,21 @@ LpcControl
                   .LpcBus(LpcBus));     // Out, LPC Address Data
 
 LpcReg
-    u_LpcReg (.PciReset(PciReset),              // In, reset
-              .LpcClock(LpcClock),              // In, 33 MHz Lpc (LPC Clock)
-              .Addr(AddrReg),                   // In, register address
-              .Wr(Wr),                          // In, write operation
-              .DataWrSW(DataWr),                // In, write data
-              .BiosStatus(BiosStatus),          // In, BIOS status setup value
-              .IntReg(IntReg),                  // In, Interrupt register setup value
-              .FAN_PRSNT_N(FAN_PRSNT_N),        // In, FAN present status
-              .BIOS_SEL(BIOS_SEL),              // In, force select BIOS
-              .JP4(JP4),                        // In, jumper 4, for future use
-              .PSU_status(PSU_status),          // In, power supply status
-              .Dual_Supply(Dual_Supply),        // In, Dual Supply status, save in SPI FLASH
+    u_LpcReg (.PciReset(PciReset),                  // In, reset
+              .LpcClock(LpcClock),                  // In, 33 MHz Lpc (LPC Clock)
+              .Addr(AddrReg),                       // In, register address
+              .Wr(Wr),                              // In, write operation
+              .Rd(Rd),                              // In, read operation
+              .DataWrSW(DataWr),                    // In, write data
+              .BiosStatus(BiosStatus),              // In, BIOS status setup value
+              .IntReg(IntReg),                      // In, Interrupt register setup value
+              .FAN_PRSNT_N(FAN_PRSNT_N),            // In, FAN present status
+              .BIOS_SEL(BIOS_SEL),                  // In, force select BIOS
+              .JP4(JP4),                            // In, jumper 4, for future use
+              .PSU_status(PSU_status),              // In, power supply status
+              .Dual_Supply(Dual_Supply),            // In, Dual Supply status, save in SPI FLASH
+              .WatchDogOccurred(WatchDogOccurred),  // In, occurr watch dog reset
+              .WatchDogIREQ(WatchDogIREQ),          // In, watch dog interrupt request
 
               .DataReg(DataReg),                // Out, Register data
               .SystemOK(SystemOK),              // Out, System OK flag(software control)
@@ -265,6 +277,7 @@ LpcReg
               .x7SegVal(x7SegVal),              // Out, 7 segment LED value
               .BiosRegister(BiosRegister),      // Out, BIOS watch dog register
               .IntRegister(IntRegister),        // Out, Interrupt register
+              .WatchDogReg(WatchDogReg),        // Out, Watch Dog register
               .FanLedCtrl(FanLedCtrl),          // Out, Fan LED control register
               .PSUFan_St(PSUFan_St),            // Out, PSU Fan state register
               .SpecialCmdReg(SpecialCmdReg));   // Out, SW controled power shutdown register

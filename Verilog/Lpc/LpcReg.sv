@@ -16,18 +16,21 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module LpcReg (
-    PciReset,       // In, reset
-    LpcClock,       // In, 33 MHz Lpc (LPC Clock)
-    Addr,           // In, register address
-    Wr,             // In, write operation
-    DataWrSW,       // In, write data from SW
-    BiosStatus,     // In, BIOS status setup value
-    IntReg,         // In, Interrupt register setup value
-    FAN_PRSNT_N,    // In, FAN present status
-    BIOS_SEL,       // In, force select BIOS
-    JP4,            // In, jumper 4, for future use
-    PSU_status,     // In, power supply status
-    Dual_Supply,    // In, Dual Supply status, save in SPI FLASH
+    PciReset,           // In, reset
+    LpcClock,           // In, 33 MHz Lpc (LPC Clock)
+    Addr,               // In, register address
+    Wr,                 // In, write operation
+    Rd,                 // In, read operation
+    DataWrSW,           // In, write data from SW
+    BiosStatus,         // In, BIOS status setup value
+    IntReg,             // In, Interrupt register setup value
+    FAN_PRSNT_N,        // In, FAN present status
+    BIOS_SEL,           // In, force select BIOS
+    JP4,                // In, jumper 4, for future use
+    PSU_status,         // In, power supply status
+    Dual_Supply,        // In, Dual Supply status, save in SPI FLASH
+    WatchDogOccurred,   // In, occurr watch dog reset
+    WatchDogIREQ,       // In, watch dog interrupt request
 
     DataReg,        // Out, Register data
     SystemOK,       // Out, System OK flag(software control)
@@ -35,6 +38,7 @@ module LpcReg (
     x7SegVal,       // Out, 7 segment LED value
     BiosRegister,   // Out, BIOS watch dog register
     IntRegister,    // Out, Interrupt register
+    WatchDogReg,    // Out, Watch Dog register
     FanLedCtrl,     // Out, Fan LED control register
     PSUFan_St,      // Out, PSU Fan state register
     SpecialCmdReg   // Out, SW controled power shutdown register
@@ -75,6 +79,7 @@ input           PciReset;
 input           LpcClock;
 input   [7:0]   Addr;
 input           Wr;
+input           Rd;
 input   [7:0]   DataWrSW;
 input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
@@ -83,6 +88,8 @@ input           BIOS_SEL;
 input           JP4;
 input   [5:4]   PSU_status;
 input           Dual_Supply;
+input           WatchDogOccurred;
+input           WatchDogIREQ;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -93,6 +100,7 @@ output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output  [7:0]   BiosRegister;
 output  [7:0]   IntRegister;
+output  [7:0]   WatchDogReg;
 output  [3:0]   FanLedCtrl;
 output  [7:0]   PSUFan_St;
 output  [7:0]   SpecialCmdReg;
@@ -106,7 +114,7 @@ output  [7:0]   SpecialCmdReg;
 //----------------------------------------------------------------------
 // Combinational, module connection
 //----------------------------------------------------------------------
-// None
+wire            RdClrRegWDC; // read clear Watch Dog Control register
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -233,6 +241,7 @@ assign x7SegSel = DataReg[14][4:0];
 assign x7SegVal = DataReg[15];
 assign BiosRegister = DataReg[1];
 assign IntRegister = DataReg[9];
+assign WatchDogReg = DataReg[11];
 assign FanLedCtrl = DataReg[27][3:0];
 assign PSUFan_St = DataReg[10];
 assign SpecialCmdReg = DataReg[24];
@@ -240,15 +249,21 @@ assign SpecialCmdReg = DataReg[24];
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-always @ (Addr or DataWrSW or IntReg or FAN_PRSNT_N) begin
+assign RdClrRegWDC = Rd & (Addr == 8'h0B);
+
+always @ (Addr or DataWrSW or IntReg or WatchDogOccurred or RdClrRegWDC or
+          WatchDogIREQ or FAN_PRSNT_N) begin
     case (Addr)
         8'h09: DataWr = {DataWrSW[7], IntReg, DataWrSW[3:0]};
+        8'h0B: DataWr = {DataReg[9][2], (WatchDogOccurred & (!RdClrRegWDC)),
+                         WatchDogIREQ, DataWrSW[4:0]};
         8'h0C: DataWr = {DataWrSW[7:3], ~FAN_PRSNT_N};
         default: DataWr = DataWrSW;
     endcase
 end
 
-always @ (DataReg[k] or IntReg or FAN_PRSNT_N) begin
+always @ (DataReg[k] or Dual_Supply or PSU_status or JP4 or BIOS_SEL or IntReg
+          or WatchDogOccurred or RdClrRegWDC or WatchDogIREQ or FAN_PRSNT_N) begin
     for (loop=0; loop<32; loop=loop+1)
         case (loop)
             8'h08: DataWrHW[loop] = {Dual_Supply, DataReg[loop][6],
@@ -256,6 +271,9 @@ always @ (DataReg[k] or IntReg or FAN_PRSNT_N) begin
                                      BIOS_SEL};
             8'h09: DataWrHW[loop] = {DataReg[loop][7], IntReg,
                                      DataReg[loop][3:0]};
+            8'h0B: DataWrHW[loop] = {DataReg[9][2],
+                                     (WatchDogOccurred & (!RdClrRegWDC)),
+                                     WatchDogIREQ, DataReg[loop][4:0]};
             8'h0C: DataWrHW[loop] = {DataReg[loop][7:3], ~FAN_PRSNT_N};
             default: DataWrHW[loop] = DataReg[loop];
         endcase

@@ -56,7 +56,7 @@
 `define DualPSCfg 1
 `define SinglePSCfg 0
 
-`define HostCmdWrPsCfg 7'h50
+`define HostCmdWrPsCfg 7'hA0
 `define HostCmdRdPsCfg 8'hB0
 
 `define Event_PsCfgIdle 0

@@ -385,14 +385,14 @@ wire    [2:0]   BiosStatus;
 wire            WriteBiosWD;
 wire    [7:0]   BiosRegister;
 wire    [7:0]   DataIntReg;
+wire    [7:0]   WatchDogReg;
 wire    [7:0]   BiosPostData;
 wire    [3:0]   FanLedCtrl;
 wire    [7:0]   PSUFan_St;
 wire    [7:0]   SpecialCmdReg;
 wire            Shutdown;
 wire            SwapBios;
-
-wire            CLK33M;
+wire            LoadWDTimer;
 
 wire            CLK33M;
 
@@ -436,6 +436,10 @@ wire            bRdIntFlashDualPsCfg;
 wire            bWrIntFlashDualPsCfg;
 wire            DualPSCfgWrBit;
 wire    [2:0]   DualPSDbgP;
+
+wire            WatchDogOccurred;
+wire            WatchDogReset;
+wire            WatchDogIREQ;
 
 //--------------------------------------------------------------------------
 // Reg declaration
@@ -609,17 +613,19 @@ PwrSequence
                    .PowerEvtState(PowerEvtState));              // In,
 
 Lpc
-    u_Lpc (.PciReset(MainResetN),         // In, PCI Reset
-           .LpcClock(CLK33M),               // In, 33 MHz Lpc (LPC Clock)
-           .LpcFrame(LPC_FRAME_N),          // In, LPC Interface: Frame
-           .LpcBus(LPC_LAD),                // In, LPC Interface: Data Bus
-           .BiosStatus(BiosStatus),         // In, Bios status setup value
-           .IntReg(InterruptRegister),      // In, Interrupt register
-           .FAN_PRSNT_N(FAN_PRSNT_N),       // In, FAN present status
-           .BIOS_SEL(BIOS_SEL),             // In, force select BIOS
-           .JP4(1'b0),                      // In, jumper 4, for future use
-           .PSU_status(PSU_status),         // In, power supply status
-           .Dual_Supply(ufm_rd_data[1]),    // In, Dual Supply status, save in SPI FLASH
+    u_Lpc (.PciReset(MainResetN),               // In, PCI Reset
+           .LpcClock(CLK33M),                   // In, 33 MHz Lpc (LPC Clock)
+           .LpcFrame(LPC_FRAME_N),              // In, LPC Interface: Frame
+           .LpcBus(LPC_LAD),                    // In, LPC Interface: Data Bus
+           .BiosStatus(BiosStatus),             // In, Bios status setup value
+           .IntReg(InterruptRegister),          // In, Interrupt register
+           .FAN_PRSNT_N(FAN_PRSNT_N),           // In, FAN present status
+           .BIOS_SEL(BIOS_SEL),                 // In, force select BIOS
+           .JP4(1'b0),                          // In, jumper 4, for future use
+           .PSU_status(PSU_status),             // In, power supply status
+           .Dual_Supply(ufm_rd_data[1]),        // In, Dual Supply status, save in SPI FLASH
+           .WatchDogOccurred(WatchDogOccurred), // In, occurr watch dog reset
+           .WatchDogIREQ(WatchDogIREQ),         // In, watch dog interrupt request
 
            .Wr(Wr),                         // Out, LPC register wtite
            .AddrReg(AddrReg),               // Out, register address
@@ -630,12 +636,14 @@ Lpc
            .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
            .BiosRegister(BiosRegister),     // Out, BIOS watch dog register
            .IntRegister(DataIntReg),        // Out, Interrupt register
+           .WatchDogReg(WatchDogReg),       // Out, Watch Dog register
            .BiosPostData(BiosPostData),     // Out, 80 port data
            .FanLedCtrl(FanLedCtrl),         // Out, Fan LED control register
            .PSUFan_St(PSUFan_St),           // Out, PSU Fan state register
            .SpecialCmdReg(SpecialCmdReg),   // Out,
            .Shutdown(Shutdown),             // Out, SW shutdown command
-           .SwapBios(SwapBios));            // Out, Swap BIOS by SW shutdown command
+           .SwapBios(SwapBios),             // Out, Swap BIOS by SW shutdown command
+           .LoadWDTimer(LoadWDTimer));      // Out, Load watch dog timer
 
 ClockSource
     u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
@@ -738,7 +746,7 @@ ButtonControl
                      .Strobe125ms(Strobe125ms),                     // In, Single SlowClock Pulse @ 125 ms
                      .SysReset(SYS_RST_IN_N),                       // In, Reset Button
                      .PowerButtonIn(PWR_BTN_IN_N),                  // In, Power Button
-                     .WatchDogReset(1'b0),                          // In, System Watch Dog Reset Request
+                     .WatchDogReset(WatchDogReset),                 // In, System Watch Dog Reset Request
                      .PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3),       // In,
                      .FM_PS_EN(FM_PS_EN),                           // In,
                      .PowerbuttonEvt(PowerbuttonEvtOut),            // In,
@@ -783,7 +791,7 @@ BiosWdtDecode
                      .bCPUWrWdtRegSig(bCPUWrWdtRegSig));    // Out,
 
 InterruptControl
-    u_InterruptControl (.WatchDogIREQ(1'b0),                    // In, Watch Dog Interrupt Request
+    u_InterruptControl (.WatchDogIREQ(WatchDogIREQ),            // In, Watch Dog Interrupt Request
                         .Wr(Wr),                                // In, LPC write signal
                         .Addr(AddrReg),                         // In, LPC register address
                         .DataIntReg(DataIntReg),                // In, Interrupt register(0x09)
@@ -845,5 +853,17 @@ DualPSCfg
                  .bWrPromCfg(bWrIntFlashDualPsCfg), // Out,
                  .DualPSCfgWrBit(DualPSCfgWrBit),   // Out,
                  .DbgP(DualPSDbgP));                // Out,
+
+WatchDog
+    u_WatchDog (.PciReset(InitResetn),                  // In, PCI Reset
+                .LpcClock(CLK33M),                      // In, 33 MHz Lpc (Altera Clock)
+                .Strobe125msec(Strobe125msec),          // In, Single LpcClock  Pulse @ 125 ms
+                .LoadWDTimer(LoadWDTimer),              // In, load watch dog timer
+                .WatchDogRegister(WatchDogReg),         // In, Watch Dog Control / Status Register
+                .ClearInterrupt(InterruptRegister),     // In, Clear Interrups: WatchDog, Reset, Power
+
+                .WatchDogOccurred(WatchDogOccurred),    // Out, occurr watch dog reset
+                .WatchDogReset(WatchDogReset),          // Out, System Watch Dog Reset Request
+                .WatchDogIREQ(WatchDogIREQ));           // Out, watch dog interrupt request
 
 endmodule  // end of ODS_MR,  top  module of this project

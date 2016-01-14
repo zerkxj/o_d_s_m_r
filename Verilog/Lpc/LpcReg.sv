@@ -26,6 +26,7 @@ module LpcReg (
     IntReg,             // In, Interrupt register setup value
     FAN_PRSNT_N,        // In, FAN present status
     BIOS_SEL,           // In, force select BIOS
+    DME_PRSNT,          // In, DME present
     JP4,                // In, jumper 4, for future use
     PSU_status,         // In, power supply status
     Dual_Supply,        // In, Dual Supply status, save in SPI FLASH
@@ -86,6 +87,7 @@ input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
 input   [2:0]   FAN_PRSNT_N;
 input           BIOS_SEL;
+input           DME_PRSNT;
 input           JP4;
 input   [5:4]   PSU_status;
 input           Dual_Supply;
@@ -162,7 +164,8 @@ reg     [7:0]   DataReg [31:0];
 // Task/Function description and included task/function description
 //------------------------------------------------------------------------------
 function [7:0] ResetValue(input [7:0] addr,
-                          input [2:0] BiosStatus);
+                          input [2:0] BiosStatus,
+                          input DME_PRSNT);
 
     case (addr)
         8'h00: ResetValue = {`FPGAID_CODE , `VERSION_CODE};
@@ -179,10 +182,10 @@ function [7:0] ResetValue(input [7:0] addr,
         8'h0B: ResetValue = 8'h00;
         8'h0C: ResetValue = 8'h00;
         8'h0D: ResetValue = 8'h11;
-        8'h0E: ResetValue = 8'hEE;
+        8'h0E: ResetValue = 8'h00;
         8'h0F: ResetValue = 8'h00;
-        8'h10: ResetValue = 8'hFF;
-        8'h11: ResetValue = 8'h55;
+        8'h10: ResetValue = {7'h00, DME_PRSNT};
+        8'h11: ResetValue = 8'h00;
         8'h12: ResetValue = 8'hAA;
         8'h13: ResetValue = 8'h66;
         8'h14: ResetValue = 8'h99;
@@ -296,7 +299,7 @@ end
 always @ (posedge LpcClock or negedge PciReset) begin
     if (!PciReset)
         for (loop=0; loop<32; loop=loop+1)
-            DataReg[loop] <= ResetValue(loop, BiosStatus);
+            DataReg[loop] <= ResetValue(loop, BiosStatus, DME_PRSNT);
     else
         for (loop=0; loop<32; loop=loop+1) begin
             if (Wr)

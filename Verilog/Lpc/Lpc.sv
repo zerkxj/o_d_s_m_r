@@ -23,6 +23,7 @@ module Lpc (
     IntReg,             // In, Interrupt register
     FAN_PRSNT_N,        // In, FAN present status
     BIOS_SEL,           // In, force select BIOS
+    DME_PRSNT,          // In, DME present
     JP4,                // In, jumper 4, for future use
     PSU_status,         // In, power supply status
     Dual_Supply,        // In, Dual Supply status, save in SPI FLASH
@@ -90,6 +91,7 @@ input   [2:0]   BiosStatus;
 input   [6:4]   IntReg;
 input   [2:0]   FAN_PRSNT_N;
 input           BIOS_SEL;
+input           DME_PRSNT;
 input           JP4;
 input   [5:4]   PSU_status;
 input           Dual_Supply;
@@ -283,6 +285,7 @@ LpcReg
               .IntReg(IntReg),                      // In, Interrupt register setup value
               .FAN_PRSNT_N(FAN_PRSNT_N),            // In, FAN present status
               .BIOS_SEL(BIOS_SEL),                  // In, force select BIOS
+              .DME_PRSNT(DME_PRSNT),                // In, DME present
               .JP4(JP4),                            // In, jumper 4, for future use
               .PSU_status(PSU_status),              // In, power supply status
               .Dual_Supply(Dual_Supply),            // In, Dual Supply status, save in SPI FLASH

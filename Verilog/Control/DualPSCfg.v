@@ -56,7 +56,7 @@
 `define DualPSCfg 1
 `define SinglePSCfg 0
 
-`define HostCmdWrPsCfg 7'hA0
+`define HostCmdWrPsCfg 7'h50
 `define HostCmdRdPsCfg 8'hB0
 
 `define Event_PsCfgIdle 0
@@ -346,28 +346,30 @@ end
 //----------------------------------------------------------------------
 always @ (posedge CLK32768 or negedge ResetN) begin
     if (!ResetN)
-        SpecialCmdReg_o = 8'd0;
+        SpecialCmdReg_o <= #TD 8'd0;
     else if (Strobe1ms)
              case (pState)
                  `Event_PsCfgIdle: begin
                      if (bPromBusy)
-                         SpecialCmdReg_o = SpecialCmdReg_o;
-                     else if (SpecialCmdReg == `HostCmdRdPsCfg)
-                              SpecialCmdReg_o = SpecialCmdReg_o;
-                          else if (SpecialCmdReg[7:1] == `HostCmdWrPsCfg)
-                                   SpecialCmdReg_o = SpecialCmdReg_o;
-                               else
-                                   SpecialCmdReg_o = SpecialCmdReg;
+                         SpecialCmdReg_o <= #TD SpecialCmdReg_o;
+                     else if (SpecialCmdReg_o == SpecialCmdReg)
+                              SpecialCmdReg_o <= #TD SpecialCmdReg;
+                          else if (SpecialCmdReg == `HostCmdRdPsCfg)
+                                   SpecialCmdReg_o <= #TD SpecialCmdReg_o;
+                               else if (SpecialCmdReg[7:1] == `HostCmdWrPsCfg)
+                                        SpecialCmdReg_o <= #TD SpecialCmdReg_o;
+                                    else
+                                        SpecialCmdReg_o <= #TD SpecialCmdReg;
                  end
 
-                 `Event_PsCfgWrite: SpecialCmdReg_o = SpecialCmdReg;
+                 `Event_PsCfgWrite: SpecialCmdReg_o <= #TD SpecialCmdReg;
 
-                 `Event_PsCfgRead: SpecialCmdReg_o = SpecialCmdReg;
+                 `Event_PsCfgRead: SpecialCmdReg_o <= #TD SpecialCmdReg;
 
-                 default: SpecialCmdReg_o = SpecialCmdReg_o;
+                 default: SpecialCmdReg_o <= #TD SpecialCmdReg_o;
              endcase
          else
-             SpecialCmdReg_o = SpecialCmdReg_o;
+             SpecialCmdReg_o <= #TD SpecialCmdReg_o;
 end
 
 always @ (posedge CLK32768 or negedge ResetN) begin

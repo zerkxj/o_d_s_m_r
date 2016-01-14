@@ -91,27 +91,27 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module PwrEvent (
-    ResetN,             // In,
-    CLK32768,           // In,
-    Strobe1ms,          // In,
-    PowerbuttonIn,      // In,
-    PwrLastStateRdBit,  // In,
+    ResetN,             // In, Reset signal
+    CLK32768,           // In, 32.768 KHz clock
+    Strobe1ms,          // In, 1ms Slow clock pulse
+    PowerbuttonIn,      // In, Power button input
+    PwrLastStateRdBit,  // In, Power last state read from flash
     SLP_S3n,            // In,
-    ATX_PowerOK,        // In,
-    ALL_PWRGD,          // In,
-    BiosLed,            // In,
+    ATX_PowerOK,        // In, 3V3 Power OK
+    ALL_PWRGD,          // In, CPU Power Good
+    BiosLed,            // In, BIOS LED
     bCPUWrWdtRegSig,    // In,
-    BiosPowerOff,       // In,
-    Shutdown,           // In,
+    BiosPowerOff,       // In, BiosWD Occurred, Force Power Off
+    Shutdown,           // In, SW shutdown command
 
-    PowerEvtState,      // Out,
-    PowerbuttonEvtOut,  // Out,
-    PS_ONn,             // Out,
+    PowerEvtState,      // Out, Power event state
+    PowerbuttonEvtOut,  // Out, Power button event
+    PS_ONn,             // Out, Power supply enable
     bPwrSystemReset,    // Out,
     bFlashPromReq,      // Out,
     bRdPromCfg,         // Out,
     bWrPromCfg,         // Out,
-    PwrLastStateWrBit,  // Out,
+    PwrLastStateWrBit,  // Out, Power last state write bit
     DbgP                // Out,
 );
 

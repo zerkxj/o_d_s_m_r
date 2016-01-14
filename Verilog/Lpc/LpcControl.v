@@ -22,6 +22,7 @@ module LpcControl (
     AddrReg,    // In, Address of the accessed Register
     State,      // In, Decoding Status
     DataRd,     // In, Multiplexed Data
+
     LpcBus      // Out, LPC Address Data
 );
 

@@ -19,6 +19,7 @@ module LpcDecoder (
     LpcClock,   // In, 33 MHz Lpc (LPC Clock)
     LpcFrame,   // In, LPC Interface: Frame
     LpcBus,     // In/Out, LPC Interface: DataWr Bus
+
     Opcode,     // Out, LPC operation (0 - Read, 1 - Write)
     Wr,         // Out, Write Access to CPLD registers
     Rd,         // Out, Read  Access to CPLD registers

@@ -17,10 +17,10 @@
 //------------------------------------------------------------------------------
 module BiosWdtDecode (
     MainResetN,     // In,
-    CLK32768,       // In,
-    Mclkx,          // In,
+    CLK32768,       // In, 32.768 KHz clock
+    Mclkx,          // In, 33 MHz clock
     WriteBiosWD,    // In, BIOS watch dog register write
-    WrDev_Data,     // In,
+    BiosWDRegSW,     // In, BIOS watch dog from SW configuration
 
     bCPUWrWdtRegSig // Out,
 );
@@ -59,7 +59,7 @@ input           MainResetN;
 input           CLK32768;
 input           Mclkx;
 input           WriteBiosWD;
-input   [7:0]   WrDev_Data;
+input   [7:0]   BiosWDRegSW;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -164,7 +164,7 @@ always @ (posedge Mclkx or negedge MainResetN) begin
         bCPUWriteWdtSig <= #TD 5'd0;
     else if (WriteBiosWD)
              if (!bCPUWdtAcsFlg)
-                 case (WrDev_Data)
+                 case (BiosWDRegSW)
                      8'h55: bCPUWriteWdtSig <= #TD {bCPUWriteWdtSig[4:1] , (~bCPUWriteWdtSig[0])};
                      8'h29: bCPUWriteWdtSig <= #TD {bCPUWriteWdtSig[4:2] ,(~bCPUWriteWdtSig[1]), bCPUWriteWdtSig[0]};
                      8'hFF: bCPUWriteWdtSig <= #TD {bCPUWriteWdtSig[4:3] ,(~bCPUWriteWdtSig[2]), bCPUWriteWdtSig[1:0]};

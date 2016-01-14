@@ -23,28 +23,27 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module Led7SegDecode (
-    ResetN,
-    Mclk,
-    ALL_PWRGD,
-    SystemOK,
-    BiosFinished,
-    BiosPostData,
-    Strobe1ms,
-    Strobe1s,       // Single SlowClock Pulse @ 1 s
-    Strobe125ms,    // Single SlowClock Pulse @ 125 ms
-    BiosStatus,
-    x7SegSel,
-    x7SegVal,
+    ResetN,         // In, Reset signal
+    Mclk,           // In, 33 MHz clock
+    ALL_PWRGD,      // In, CPU Power Good
+    SystemOK,       // In, System OK from register
+    BiosFinished,   // In, Bios Has been finished
+    BiosPostData,   // In, 80 port data
+    Strobe1ms,      // In, Signal SlowClock Pulse @ 1ms
+    Strobe1s,       // In, Single SlowClock Pulse @ 1 s
+    Strobe125ms,    // In, Single SlowClock Pulse @ 125 ms
+    BiosStatus,     // In, Bios status setup value
+    x7SegSel,       // In, 7 Segment LED select
+    x7SegVal,       // In, 7 Segment LED value
+    PowerEvtState,  // In, Power event state
+    FM_PLD_DEBUG2,  // In, FM_PLD_DEBUG[5:2] from PwrSequence module
+    FM_PLD_DEBUG3,  // In,
+    FM_PLD_DEBUG4,  // In,
+    FM_PLD_DEBUG5,  // In,
 
-    PowerEvtState,
-    Led7En,
-    Led7Leg,
-
-    FM_PLD_DEBUG2,  // FM_PLD_DEBUG[5:2] to MR_Bsp.Led7SegDecode; from PwrSequence module
-    FM_PLD_DEBUG3,
-    FM_PLD_DEBUG4,
-    FM_PLD_DEBUG5,
-    PORT80_DP
+    Led7En,     // Out, Enable signal of 7 segment
+    Led7Leg,    // Out, 7 segment output value
+    PORT80_DP   // Out, Debug 80 port
 );
 
 //------------------------------------------------------------------------------
@@ -89,21 +88,18 @@ input           Strobe125ms;
 input   [2:0]   BiosStatus;
 input   [4:0]   x7SegSel;
 input   [7:0]   x7SegVal;
-
 input   [3:0]   PowerEvtState;
-
-input FM_PLD_DEBUG2;  // FM_PLD_DEBUG[5:2] to MR_Bsp.Led7SegDecode; from PwrSequence module
-input FM_PLD_DEBUG3;
-input FM_PLD_DEBUG4;
-input FM_PLD_DEBUG5;
+input           FM_PLD_DEBUG2;
+input           FM_PLD_DEBUG3;
+input           FM_PLD_DEBUG4;
+input           FM_PLD_DEBUG5;
 
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
 output  [5:0]   Led7En;
 output  [6:0]   Led7Leg;
-
-output PORT80_DP;
+output          PORT80_DP;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -148,7 +144,6 @@ wire    [4:0]   ActiveBios;
 //------------------------------------------------------------------
 reg     [5:0]   Led7En;
 reg     [6:0]   Led7Leg;
-
 reg             PORT80_DP;
 
 //------------------------------------------------------------------

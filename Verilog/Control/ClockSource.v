@@ -19,9 +19,10 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module ClockSource (
-    HARD_nRESETi,   // In,
+    HARD_nRESETi,   // In, Reset signal
     LCLK_CPLD,      // In, 33MHz clock source from LPC
     MCLK_FPGA,      // In, 33MHz clock source from OSC
+
     Mclkx           // Out, Clock Source output
 );
 

@@ -24,18 +24,19 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module ButtonControl (
-    MainReset,              // In, Power or Controller ICH10R Reset
-    SlowClock,              // In, Oscillator Clock 32,768 Hz
-    Strobe1s,               // In, Single SlowClock Pulse @ 1s
-    Strobe16ms,             // In, Single SlowClock Pulse @ 16 ms
-    Strobe125ms,            // In, Single SlowClock Pulse @ 125 ms
-    SysReset,               // In, Reset Button
-    PowerButtonIn,          // In, Power Button
-    WatchDogReset,          // In, System Watch Dog Reset Request
-    PWRGD_PS_PWROK_3V3,     // In,
-    FM_PS_EN,               // In,
-    PowerbuttonEvt,         // In,
-    PowerEvtState,          // In,
+    MainReset,          // In, Power or Controller ICH10R Reset
+    SlowClock,          // In, Oscillator Clock 32,768 Hz
+    Strobe1s,           // In, Single SlowClock Pulse @ 1s
+    Strobe16ms,         // In, Single SlowClock Pulse @ 16 ms
+    Strobe125ms,        // In, Single SlowClock Pulse @ 125 ms
+    SysReset,           // In, Reset Button
+    PowerButtonIn,      // In, Power Button
+    WatchDogReset,      // In, System Watch Dog Reset Request
+    PWRGD_PS_PWROK_3V3, // In, 3V3 Power Good
+    FM_PS_EN,           // In, Power Supply enable
+    PowerbuttonEvt,     // In, Power button event
+    PowerEvtState,      // In, Power evnet state
+
     Interrupt,              // Out, Power & Reset Interrupts and Button release
     PowerButtonDebounce,    // Out, Debounced Power Button
     ResetOut,               // Out, Active Wide Strobe 4s after  the button pushed

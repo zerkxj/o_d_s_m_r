@@ -378,12 +378,16 @@ wire            FM_PLD_DEBUG3;
 wire            FM_PLD_DEBUG4;
 wire            FM_PLD_DEBUG5;
 
-wire            Wr;
-wire    [7:0]   AddrReg;
-wire    [7:0]   DataWr;
+wire    [7:0]   BiosWDRegSW;
 wire    [2:0]   BiosStatus;
 wire            WriteBiosWD;
-wire    [7:0]   BiosRegister;
+wire            WrBiosStsReg;
+wire    [7:0]   BiosWDReg;
+wire            LBCF;
+wire            NextBiosSW;
+wire            ActiveBiosSW;
+wire            WrIntReg;
+wire            ClrIntSW;
 wire    [7:0]   DataIntReg;
 wire    [7:0]   WatchDogReg;
 wire    [7:0]   BiosPostData;
@@ -408,9 +412,11 @@ wire    [7:0]   x7SegVal;
 
 wire    [3:0]   PowerEvtState;
 
+wire    [1:0]   DPx;
 wire            BiosFinished;
-wire            BiosPowerOff;
 wire            ForceSwap;
+wire            BiosWatchDogReset;
+wire            BiosPowerOff;
 
 wire    [3:0]   InterruptButton;
 wire            PowerButtonDebounce;
@@ -610,7 +616,7 @@ PwrSequence
                    .FM_PLD_DEBUG4(FM_PLD_DEBUG4),               // Out
                    .FM_PLD_DEBUG5(FM_PLD_DEBUG5),               // Out
                    .PsonFromPwrEvent(PsonFromPwrEvent),         // In, Integration to MstrSeq.sv is not validated yet.
-                   .PowerEvtState(PowerEvtState));              // In,
+                   .PowerEvtState(PowerEvtState));              // In, Power event state
 
 Lpc
     u_Lpc (.PciReset(MainResetN),               // In, PCI Reset
@@ -627,14 +633,18 @@ Lpc
            .WatchDogOccurred(WatchDogOccurred), // In, occurr watch dog reset
            .WatchDogIREQ(WatchDogIREQ),         // In, watch dog interrupt request
 
-           .Wr(Wr),                         // Out, LPC register wtite
-           .AddrReg(AddrReg),               // Out, register address
-           .DataWr(DataWr),                 // Out, register write data
+           .BiosWDRegSW(BiosWDRegSW),       // Out, BIOS watch dog register from SW configuration
            .SystemOK(SystemOK),             // Out, System OK flag(software control)
            .x7SegSel(x7SegSel),             // Out, 7 Segment LED select
            .x7SegVal(x7SegVal),             // Out, 7 Segment LED value
            .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
-           .BiosRegister(BiosRegister),     // Out, BIOS watch dog register
+           .WrBiosStsReg(WrBiosStsReg),     // Out, Write BIOS status register
+           .BiosWDReg(BiosWDReg),           // Out, BIOS watch dog register
+           .LBCF(LBCF),                     // Out, Lock BIOS Chip Flag
+           .NextBiosSW(NextBiosSW),         // Out, Next BIOS SW configuration
+           .ActiveBiosSW(ActiveBiosSW),     // Out, Active BIOS SW confguration
+           .WrIntReg(WrIntReg),             // Out, Write interrupt status and control register
+           .ClrIntSW(ClrIntSW),             // Out, Clear interrupr from SW
            .IntRegister(DataIntReg),        // Out, Interrupt register
            .WatchDogReg(WatchDogReg),       // Out, Watch Dog register
            .BiosPostData(BiosPostData),     // Out, 80 port data
@@ -646,25 +656,31 @@ Lpc
            .LoadWDTimer(LoadWDTimer));      // Out, Load watch dog timer
 
 ClockSource
-    u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In,
+    u_ClockSource (.HARD_nRESETi(RST_RSMRST_N), // In, Reset signal
                    .LCLK_CPLD(LCLK_CPLD),       // In, 33MHz clock source from LPC
                    .MCLK_FPGA(MCLK_FPGA),       // In, 33MHz clock source from OSC
+
                    .Mclkx(CLK33M));             // Out, Clock Source output
 
 BiosControl
-    u_BiosControl (.ResetN(InitResetn),                 // Power reset
-                   .MainReset(!MainResetN),             // Power or Controller ICH10R Reset
-                   .LpcClock(CLK33M),                   // 33 MHz Lpc (Altera Clock)
-                   .RstBiosFlg(RstBiosFlg),             // In, Reset BIOS to BIOS0
-                   .Write(Wr),                          // Write Access to CPLD registor
-                   .BiosCS(SPI_PCH_CS0_N),              // ICH10 BIOS Chip Select (SPI Interface)
-                   .BIOS_SEL(BIOS_SEL),                 // BIOS SELECT  - Bios Select Jumper (default "1")
-                   .SwapDisable(1'b0),                  // Disable BIOS Swapping after Power Up
-                   .ForceSwap({ForceSwap, SwapBios}),   // BiosWD Occurred, Force BIOS Swap while power restart
-                   .RegAddress(AddrReg),                // Address of the accessed Register
-                   .DataWr(DataWr),                     // Data to be written to CPLD Register
-                   .BIOS(BIOS_CS_N),                    // Chip Select to SPI Flash Memories
-                   .BiosStatus(BiosStatus));            // BIOS status
+    u_BiosControl (.ResetN(InitResetn),                     // In, Power reset
+                   .MainReset(!MainResetN),                 // In, Power or Controller ICH10R Reset
+                   .LpcClock(CLK33M),                       // In, 33 MHz Lpc (Altera Clock)
+                   .CLK32768(CLK32768),                     // In, 32.768 KHZ clock
+                   .RstBiosFlg(RstBiosFlg),                 // In, In, Reset BIOS to BIOS0
+                   .WrBiosStsReg(WrBiosStsReg),             // In, Write BIOS status registor
+                   .NextBiosSW(NextBiosSW),                 // In, Next BIOS from SW configuration
+                   .ActiveBiosSW(ActiveBiosSW),             // In, Active BIOS from SW configuration
+                   .BiosWatchDogReset(BiosWatchDogReset),   // In, BIOS watch dog reset
+                   .LBCF(LBCF),                             // In, Lock BIOS Chip Flag
+                   .ALL_PWRGD(PWRGD_CPUPWRGD),              // In, all power good
+                   .Strobe125ms(Strobe125ms),               // In, 125ms strobe signal
+                   .BiosCS(SPI_PCH_CS0_N),                  // In, ICH10 BIOS Chip Select (SPI Interface)
+                   .BIOS_SEL(BIOS_SEL),                     // In, BIOS SELECT  - Bios Select Jumper (default "1")
+                   .ForceSwap({ForceSwap, SwapBios}),       // In, BiosWD Occurred, Force BIOS Swap while power restart
+
+                   .BIOS(BIOS_CS_N),                    // Out, Chip Select to SPI Flash Memories
+                   .BiosStatus(BiosStatus));            // Out, BIOS status
 
 HwResetGenerate
     u_HwResetGenerate (.HARD_nRESETi(RST_RSMRST_N),                 // In, P3V3_AUX power on reset input
@@ -690,33 +706,33 @@ HwResetGenerate
                        .RST_PCH_RSTBTN_N(RST_PCH_RSTBTN_N));        // Out,
 
 Led7SegDecode
-    u_Led7SegDecode (.ResetN(InitResetn),
-                     .Mclk(CLK32768),
-                     .ALL_PWRGD(PWRGD_CPUPWRGD),
-                     .SystemOK(SystemOK),
-                     .BiosFinished(BiosFinished),
-                     .BiosPostData(BiosPostData),
-                     .Strobe1ms(Strobe1ms),
-                     .Strobe1s(Strobe1s),           // Single SlowClock Pulse @ 1 s
-                     .Strobe125ms(Strobe125ms),     // Single SlowClock Pulse @ 125 ms
-                     .BiosStatus(BiosStatus),
-                     .x7SegSel(x7SegSel),
-                     .x7SegVal(x7SegVal),
+    u_Led7SegDecode (.ResetN(InitResetn),           // In, Reset signal
+                     .Mclk(CLK32768),               // In, 33 MHz clock
+                     .ALL_PWRGD(PWRGD_CPUPWRGD),    // In, CPU Power Good
+                     .SystemOK(SystemOK),           // In, System OK from register
+                     .BiosFinished(BiosFinished),   // In, Bios Has been finished
+                     .BiosPostData(BiosPostData),   // In, 80 port data
+                     .Strobe1ms(Strobe1ms),         // In, Signal SlowClock Pulse @ 1ms
+                     .Strobe1s(Strobe1s),           // In, Single SlowClock Pulse @ 1 s
+                     .Strobe125ms(Strobe125ms),     // In, Single SlowClock Pulse @ 125 ms
+                     .BiosStatus(BiosStatus),       // In, Bios status setup value
+                     .x7SegSel(x7SegSel),           // In, 7 Segment LED select
+                     .x7SegVal(x7SegVal),           // In, 7 Segment LED value
+                     .PowerEvtState(PowerEvtState), // In, Power event state
+                     .FM_PLD_DEBUG2(FM_PLD_DEBUG2), // In, FM_PLD_DEBUG[5:2] from PwrSequence module
+                     .FM_PLD_DEBUG3(FM_PLD_DEBUG3), // In,
+                     .FM_PLD_DEBUG4(FM_PLD_DEBUG4), // In,
+                     .FM_PLD_DEBUG5(FM_PLD_DEBUG5), // In,
 
-                     .PowerEvtState(PowerEvtState),
-                     .Led7En(LED7_digit),
-                     .Led7Leg(LED7_SEG),
-
-                     .FM_PLD_DEBUG2(FM_PLD_DEBUG2),  // FM_PLD_DEBUG[5:2] to MR_Bsp.Led7SegDecode; from PwrSequence module
-                     .FM_PLD_DEBUG3(FM_PLD_DEBUG3),
-                     .FM_PLD_DEBUG4(FM_PLD_DEBUG4),
-                     .FM_PLD_DEBUG5(FM_PLD_DEBUG5),
-                     .PORT80_DP(LED7_SEGDP));
+                     .Led7En(LED7_digit),       // Out, Enable signal of 7 segment
+                     .Led7Leg(LED7_SEG),        // Out, 7 segment output value
+                     .PORT80_DP(LED7_SEGDP));   // Out, Debug 80 port
 
 StrobeGen
-    u_StrobeGen (.ResetN(InitResetn),           // In,
-                 .LpcClock(CLK33M),             // In, 33 MHz Lpc (Altera Clock)
+    u_StrobeGen (.ResetN(InitResetn),           // In, Reset signal
+                 .LpcClock(CLK33M),             // In, 33 MHz Lpc
                  .SlowClock(CLK32768),          // In, Oscillator Clock 32,768 Hz
+
                  .Strobe1s(Strobe1s),           // Out, Single SlowClock Pulse @ 1 s
                  .Strobe488us(Strobe488us),     // Out, Single SlowClock Pulse @ 488 us
                  .Strobe1ms(Strobe1ms),         // Out, Single SlowClock Pulse @ 1 ms
@@ -731,26 +747,29 @@ BiosWatchDog
                     .LpcClock(CLK33M),              // In, 33 MHz Lpc (Altera Clock)
                     .MainReset(MainResetN),         // In, Power or Controller ICH10R Reset
                     .PS_ONn(FM_PS_EN),              // In,
-                    .DPx(),                         // Out,
                     .Strobe125msec(Strobe125msec),  // In, Single LpcClock  Pulse @ 125 ms
-                    .BiosRegister(BiosRegister),    // In, Bios Watch Dog Control Register
-                    .BiosFinished(BiosFinished),    // Out, Bios Has been finished
-                    .BiosPowerOff(BiosPowerOff),    // Out, BiosWD Occurred, Force Power Off
-                    .ForceSwap(ForceSwap));         // Out, BiosWD Occurred, Force BIOS Swap while power restart
+                    .BiosWDReg(BiosWDReg),          // In, Bios Watch Dog Control Register
+
+                    .DPx(DPx),                              // Out,
+                    .BiosFinished(BiosFinished),            // Out, Bios Has been finished
+                    .ForceSwap(ForceSwap),                  // Out, BiosWD Occurred, Force BIOS Swap while power restart
+                    .BiosWatchDogReset(BiosWatchDogReset),  // Out, BIOS Watch Dog reset
+                    .BiosPowerOff(BiosPowerOff));           // Out, BiosWD Occurred, Force Power Off
 
 ButtonControl
-    u_ButtonControl (.MainReset(InitResetn),                        // In, Power or Controller ICH10R Reset
-                     .SlowClock(CLK32768),                          // In, Oscillator Clock 32,768 Hz
-                     .Strobe1s(Strobe1s),                           // In, Single SlowClock Pulse @ 1s
-                     .Strobe16ms(Strobe16ms),                       // In, Single SlowClock Pulse @ 16 ms
-                     .Strobe125ms(Strobe125ms),                     // In, Single SlowClock Pulse @ 125 ms
-                     .SysReset(SYS_RST_IN_N),                       // In, Reset Button
-                     .PowerButtonIn(PWR_BTN_IN_N),                  // In, Power Button
-                     .WatchDogReset(WatchDogReset),                 // In, System Watch Dog Reset Request
-                     .PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3),       // In,
-                     .FM_PS_EN(FM_PS_EN),                           // In,
-                     .PowerbuttonEvt(PowerbuttonEvtOut),            // In,
-                     .PowerEvtState(PowerEvtState),                 // In,
+    u_ButtonControl (.MainReset(InitResetn),                    // In, Power or Controller ICH10R Reset
+                     .SlowClock(CLK32768),                      // In, Oscillator Clock 32,768 Hz
+                     .Strobe1s(Strobe1s),                       // In, Single SlowClock Pulse @ 1s
+                     .Strobe16ms(Strobe16ms),                   // In, Single SlowClock Pulse @ 16 ms
+                     .Strobe125ms(Strobe125ms),                 // In, Single SlowClock Pulse @ 125 ms
+                     .SysReset(SYS_RST_IN_N),                   // In, Reset Button
+                     .PowerButtonIn(PWR_BTN_IN_N),              // In, Power Button
+                     .WatchDogReset(WatchDogReset),             // In, System Watch Dog Reset Request
+                     .PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3),   // In, 3V3 Power Good
+                     .FM_PS_EN(FM_PS_EN),                       // In, Power Supply enable
+                     .PowerbuttonEvt(PowerbuttonEvtOut),        // In, Power button event
+                     .PowerEvtState(PowerEvtState),             // In, Power event state
+
                      .Interrupt(InterruptButton),                   // Out, Power & Reset Interrupts and Button release
                      .PowerButtonDebounce(PowerButtonDebounce),     // Out, Debounced Power Button
                      .ResetOut(ResetOut_ox),                        // Out, Active Wide Strobe 4s after  the button pushed
@@ -758,45 +777,45 @@ ButtonControl
                      .FM_SYS_SIO_PWRBTN_N(FM_SYS_SIO_PWRBTN_N));    // Out
 
 PwrEvent
-    u_PwrEvent (.ResetN(InitResetn),
-                .CLK32768(CLK32768),
-                .Strobe1ms(Strobe1ms),
-                .PowerbuttonIn(PWR_BTN_IN_N),
-                .PwrLastStateRdBit(ufm_rd_data[0]),
-                .SLP_S3n(FM_SLPS3_N),
-                .ATX_PowerOK(PWRGD_PS_PWROK_3V3),
-                .ALL_PWRGD(PWRGD_CPUPWRGD),
-                .BiosLed(BIOS_LED_N),
-                .bCPUWrWdtRegSig(bCPUWrWdtRegSig),
-                .BiosPowerOff(BiosPowerOff),
-                .Shutdown(Shutdown),
+    u_PwrEvent (.ResetN(InitResetn),                // In, Reset signal
+                .CLK32768(CLK32768),                // In, 32.768 KHz clock
+                .Strobe1ms(Strobe1ms),              // In, 1ms Slow clock pulse
+                .PowerbuttonIn(PWR_BTN_IN_N),       // In, Power button input
+                .PwrLastStateRdBit(ufm_rd_data[0]), // In, Power last state read from flash
+                .SLP_S3n(FM_SLPS3_N),               // In,
+                .ATX_PowerOK(PWRGD_PS_PWROK_3V3),   // In, 3V3 Power OK
+                .ALL_PWRGD(PWRGD_CPUPWRGD),         // In, CPU Power Good
+                .BiosLed(BIOS_LED_N),               // In, BIOS LED
+                .bCPUWrWdtRegSig(bCPUWrWdtRegSig),  // In,
+                .BiosPowerOff(BiosPowerOff),        // In, BiosWD Occurred, Force Power Off
+                .Shutdown(Shutdown),                // In, SW shutdown command
 
-                .PowerEvtState(PowerEvtState),
-                .PowerbuttonEvtOut(PowerbuttonEvtOut),
-                .PS_ONn(PsonFromPwrEvent),
-                .bPwrSystemReset(bPwrSystemReset),
-                .bFlashPromReq(bPowerEvtFlashReg),
-                .bRdPromCfg(bRdIntFlashPwrEvtCfg),
-                .bWrPromCfg(bWrIntFlashPwrEvtCfg),
-                .PwrLastStateWrBit(PwrLastStateWrBit),
-                .DbgP(EvpDbgP));
+                .PowerEvtState(PowerEvtState),          // Out, Power event state
+                .PowerbuttonEvtOut(PowerbuttonEvtOut),  // Out, Power button event
+                .PS_ONn(PsonFromPwrEvent),              // Out, Power supply enable
+                .bPwrSystemReset(bPwrSystemReset),      // Out,
+                .bFlashPromReq(bPowerEvtFlashReg),      // Out,
+                .bRdPromCfg(bRdIntFlashPwrEvtCfg),      // Out,
+                .bWrPromCfg(bWrIntFlashPwrEvtCfg),      // Out,
+                .PwrLastStateWrBit(PwrLastStateWrBit),  // Out, Power last state write bit
+                .DbgP(EvpDbgP));                        // Out,
 
 BiosWdtDecode
-    u_BiosWdtDecode (.MainResetN(MainResetN),               // In,
-                     .CLK32768(CLK32768),                   // In,
-                     .Mclkx(CLK33M),                        // In,
-                     .WriteBiosWD(WriteBiosWD),             // In, BIOS watch dog register write
-                     .WrDev_Data(DataWr),                   // In,
+    u_BiosWdtDecode (.MainResetN(MainResetN),   // In,
+                     .CLK32768(CLK32768),       // In, 32.768 KHz clock
+                     .Mclkx(CLK33M),            // In, 33 MHz clock
+                     .WriteBiosWD(WriteBiosWD), // In, BIOS watch dog register write
+                     .BiosWDRegSW(BiosWDRegSW), // In, BIOS watch dog from SW configuration
 
                      .bCPUWrWdtRegSig(bCPUWrWdtRegSig));    // Out,
 
 InterruptControl
-    u_InterruptControl (.WatchDogIREQ(WatchDogIREQ),            // In, Watch Dog Interrupt Request
-                        .Wr(Wr),                                // In, LPC write signal
-                        .Addr(AddrReg),                         // In, LPC register address
-                        .DataIntReg(DataIntReg),                // In, Interrupt register(0x09)
-                        .DataWr(DataWr),                        // In, Data to be written to register
-                        .Interrupt(InterruptButton),            // In, Power & Reset Interrupts and Button release
+    u_InterruptControl (.WatchDogIREQ(WatchDogIREQ),    // In, Watch Dog Interrupt Request
+                        .WrIntReg(WrIntReg),            // In, Write interrupt status and control register
+                        .DataIntReg(DataIntReg),        // In, Interrupt register(0x09)
+                        .ClrIntSW(ClrIntSW),            // In, Clear interrupt from SW
+                        .Interrupt(InterruptButton),    // In, Power & Reset Interrupts and Button release
+
                         .InterruptRegister(InterruptRegister),  // Out, Interrupt Control / Status Register
                         .InterruptD(CPLD_PCH_INT_N));           // Out, Interrupt Request to CPU
 

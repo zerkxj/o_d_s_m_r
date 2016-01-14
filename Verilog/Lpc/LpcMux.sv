@@ -20,6 +20,7 @@ module LpcMux (
     AddrReg,        // In, Address of the accessed Register
     DataReg,        // In, Register data
     BiosStatus,     // In, BIOS status
+
     DataRd          // Out, Multiplexed Data
 );
 

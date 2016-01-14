@@ -29,14 +29,18 @@ module Lpc (
     WatchDogOccurred,   // In, occurr watch dog reset
     WatchDogIREQ,       // In, watch dog interrupt request
 
-    Wr,             // Out, LPC register wtite
-    AddrReg,        // Out, register address
-    DataWr,         // Out, register write data
+    BiosWDRegSW,    // Out, BIOS watch dog register from SW configuration
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 Segment LED select
     x7SegVal,       // Out, 7 Segment LED value
     WriteBiosWD,    // Out, BIOS watch dog register write
-    BiosRegister,   // Out, BIOS watch dog register
+    WrBiosStsReg,   // Out, Write BIOS status register
+    BiosWDReg,      // Out, BIOS watch dog register
+    LBCF,           // Out, Lock BIOS Chip Flag
+    NextBiosSW,     // Out, Next BIOS SW configuration
+    ActiveBiosSW,   // Out, Active BIOS SW confguration
+    WrIntReg,       // Out, Write interrupt status and control register
+    ClrIntSW,       // Out, Clear interrupr from SW
     IntRegister,    // Out, Interrupt register
     WatchDogReg,    // Out, Watch Dog register
     BiosPostData,   // Out, 80 port data
@@ -95,14 +99,18 @@ input           WatchDogIREQ;
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
-output          Wr;
-output  [7:0]   AddrReg;
-output  [7:0]   DataWr;
+output  [7:0]   BiosWDRegSW;
 output          SystemOK;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output          WriteBiosWD;
-output  [7:0]   BiosRegister;
+output          WrBiosStsReg;
+output  [7:0]   BiosWDReg;
+output          LBCF;
+output          NextBiosSW;
+output          ActiveBiosSW;
+output          WrIntReg;
+output  [2:0]   ClrIntSW;
 output  [7:0]   IntRegister;
 output  [7:0]   WatchDogReg;
 output  [7:0]   BiosPostData;
@@ -123,7 +131,10 @@ output          LoadWDTimer;
 // Combinational, module connection
 //----------------------------------------------------------------------
 wire            Opcode;
+wire            Wr;
 wire            Rd;
+wire    [7:0]   AddrReg;
+wire    [7:0]   DataWr;
 wire    [10:6]  StateOut;
 wire    [7:0]   DataRd;
 wire    [7:0]   DataReg [31:0];
@@ -183,6 +194,11 @@ reg             Shutdown_d; // Shutdown delay 1T
 // Output
 //----------------------------------------------------------------------
 assign WriteBiosWD = Wr & (AddrReg == 8'h01);
+assign WrBiosStsReg = Wr & (AddrReg == 8'h04);
+assign NextBiosSW = DataWr[1];
+assign ActiveBiosSW = DataWr[0];
+assign WrIntReg = Wr & (AddrReg == 8'h09);
+assign ClrIntSW = DataWr[6:4] & {3{WrIntReg}};
 assign LoadWDTimer = Wr & (AddrReg == 8'h0B);
 
 //----------------------------------------------------------------------
@@ -237,6 +253,7 @@ LpcDecoder
                   .LpcClock(LpcClock),      // In, 33 MHz Lpc (LPC Clock)
                   .LpcFrame(LpcFrame),      // In, LPC Interface: Frame
                   .LpcBus(LpcBus),          // In/Out, LPC Interface: Data Bus
+
                   .Opcode(Opcode),          // Out, LPC operation (0 - Read, 1 - Write)
                   .Wr(Wr),                  // Out, Write Access to CPLD registers
                   .Rd(Rd),                  // Out, Read  Access to CPLD registers
@@ -252,6 +269,7 @@ LpcControl
                   .State(StateOut),     // In, Decoding Status
                   .AddrReg(AddrReg),    // In, Address of the accessed Register
                   .DataRd(DataRd),      // In, Multiplexed Data
+
                   .LpcBus(LpcBus));     // Out, LPC Address Data
 
 LpcReg
@@ -271,16 +289,17 @@ LpcReg
               .WatchDogOccurred(WatchDogOccurred),  // In, occurr watch dog reset
               .WatchDogIREQ(WatchDogIREQ),          // In, watch dog interrupt request
 
-              .DataReg(DataReg),                // Out, Register data
+              .BiosWDReg(BiosWDReg),            // Out, BIOS watch dog register
+              .LBCF(LBCF),                      // Out, Lock BIOS Chip Flag
               .SystemOK(SystemOK),              // Out, System OK flag(software control)
+              .IntRegister(IntRegister),        // Out, Interrupt register
+              .PSUFan_St(PSUFan_St),            // Out, PSU Fan state register
+              .WatchDogReg(WatchDogReg),        // Out, Watch Dog register
               .x7SegSel(x7SegSel),              // Out, 7 segment LED select
               .x7SegVal(x7SegVal),              // Out, 7 segment LED value
-              .BiosRegister(BiosRegister),      // Out, BIOS watch dog register
-              .IntRegister(IntRegister),        // Out, Interrupt register
-              .WatchDogReg(WatchDogReg),        // Out, Watch Dog register
+              .SpecialCmdReg(SpecialCmdReg),    // Out, SW controled power shutdown register
               .FanLedCtrl(FanLedCtrl),          // Out, Fan LED control register
-              .PSUFan_St(PSUFan_St),            // Out, PSU Fan state register
-              .SpecialCmdReg(SpecialCmdReg));   // Out, SW controled power shutdown register
+              .DataReg(DataReg));               // Out, Register data
 
 LpcMux
     u_LpcMux (.PciReset(PciReset),      // In, PCI Reset
@@ -288,6 +307,7 @@ LpcMux
               .AddrReg(AddrReg),        // In, Address of the accessed Register
               .DataReg(DataReg),        // In, Register data
               .BiosStatus(BiosStatus),  // In, BIOS status
+
               .DataRd(DataRd));         // Out, Multiplexed Data
 
 endmodule

@@ -26,11 +26,11 @@
 //------------------------------------------------------------------------------
 module InterruptControl (
     WatchDogIREQ,       // In, Watch Dog Interrupt Request
-    Wr,                 // In, LPC write signal
-    Addr,               // In, LPC register address
+    WrIntReg,           // In, Write interrupt status and control register
     DataIntReg,         // In, Interrupt register(0x09)
-    DataWr,             // In, Data to be written to register
+    ClrIntSW,           // In, Clear interrupt from SW
     Interrupt,          // In, Power & Reset Interrupts and Button release
+
     InterruptRegister,  // Out, Interrupt Control / Status Register
     InterruptD          // Out, Interrupt Request to CPU
 );
@@ -66,10 +66,9 @@ localparam TD = 1;
 // Input declaration
 //--------------------------------------------------------------------------
 input           WatchDogIREQ;
-input           Wr;
-input   [7:0]   Addr;
+input           WrIntReg;
 input   [7:0]   DataIntReg;
-input   [7:0]   DataWr;
+input   [2:0]   ClrIntSW;
 input   [3:0]   Interrupt;
 
 //--------------------------------------------------------------------------
@@ -91,8 +90,7 @@ wire            ATX;
 wire    [2:0]   EnableInt;
 wire            ResetEvent;
 wire            PowerEvent;
-wire            WrRegInt;
-wire    [6:4]   ClearInterrupt;
+wire            WrIntReg;
 wire            IREQWatchDog;
 wire            IREQResetButton;
 wire            IREQPwrButton;
@@ -163,11 +161,9 @@ assign ATX = DataIntReg[3];
 assign EnableInt = DataIntReg[2:0];
 assign ResetEvent = ATX ? Interrupt[0] : Interrupt[1];
 assign PowerEvent = ATX ? Interrupt[2] : Interrupt[3];
-assign WrRegInt = Wr & (Addr == 8'h09);
-assign ClearInterrupt = DataWr[6:4] & {3{WrRegInt}};
 assign IREQWatchDog = WatchDogIREQ | DataIntReg[6];
-assign IREQResetButton = ResetEvent | DataIntReg[5] & (!ClearInterrupt[5]);
-assign IREQPwrButton = PowerEvent | DataIntReg[4] & (!ClearInterrupt[4]);
+assign IREQResetButton = ResetEvent | DataIntReg[5] & (!ClrIntSW[5]);
+assign IREQPwrButton = PowerEvent | DataIntReg[4] & (!ClrIntSW[4]);
 assign InterruptRequest = |({IREQWatchDog, IREQResetButton, IREQPwrButton} &
                             EnableInt);
 

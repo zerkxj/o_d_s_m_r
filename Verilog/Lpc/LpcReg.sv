@@ -32,16 +32,17 @@ module LpcReg (
     WatchDogOccurred,   // In, occurr watch dog reset
     WatchDogIREQ,       // In, watch dog interrupt request
 
-    DataReg,        // Out, Register data
+    BiosWDReg,      // Out, BIOS watch dog register
+    LBCF,           // Out, Lock BIOS Chip Flag
     SystemOK,       // Out, System OK flag(software control)
+    IntRegister,    // Out, Interrupt register
+    PSUFan_St,      // Out, PSU Fan state register
+    WatchDogReg,    // Out, Watch Dog register
     x7SegSel,       // Out, 7 segment LED select
     x7SegVal,       // Out, 7 segment LED value
-    BiosRegister,   // Out, BIOS watch dog register
-    IntRegister,    // Out, Interrupt register
-    WatchDogReg,    // Out, Watch Dog register
+    SpecialCmdReg,  // Out, SW controled power shutdown register
     FanLedCtrl,     // Out, Fan LED control register
-    PSUFan_St,      // Out, PSU Fan state register
-    SpecialCmdReg   // Out, SW controled power shutdown register
+    DataReg         // Out, Register data
 );
 
 //------------------------------------------------------------------------------
@@ -94,16 +95,17 @@ input           WatchDogIREQ;
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
-output  [7:0]   DataReg [31:0];
+output  [7:0]   BiosWDReg;
+output          LBCF;
 output          SystemOK;
+output  [7:0]   IntRegister;
+output  [7:0]   PSUFan_St;
+output  [7:0]   WatchDogReg;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
-output  [7:0]   BiosRegister;
-output  [7:0]   IntRegister;
-output  [7:0]   WatchDogReg;
-output  [3:0]   FanLedCtrl;
-output  [7:0]   PSUFan_St;
 output  [7:0]   SpecialCmdReg;
+output  [3:0]   FanLedCtrl;
+output  [7:0]   DataReg [31:0];
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -236,15 +238,16 @@ endfunction
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
+assign BiosWDReg = DataReg[1];
+assign LBCF = DataReg[4][4];
 assign SystemOK = DataReg[8][6];
+assign IntRegister = DataReg[9];
+assign PSUFan_St = DataReg[10];
+assign WatchDogReg = DataReg[11];
 assign x7SegSel = DataReg[14][4:0];
 assign x7SegVal = DataReg[15];
-assign BiosRegister = DataReg[1];
-assign IntRegister = DataReg[9];
-assign WatchDogReg = DataReg[11];
-assign FanLedCtrl = DataReg[27][3:0];
-assign PSUFan_St = DataReg[10];
 assign SpecialCmdReg = DataReg[24];
+assign FanLedCtrl = DataReg[27][3:0];
 
 //----------------------------------------------------------------------
 // Internal signal

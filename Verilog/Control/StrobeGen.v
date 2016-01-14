@@ -25,9 +25,10 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module StrobeGen (
-    ResetN,         // In,
-    LpcClock,       // In, 33 MHz Lpc (Altera Clock)
+    ResetN,         // In, Reset signal
+    LpcClock,       // In, 33 MHz Lpc
     SlowClock,      // In, Oscillator Clock 32,768 Hz
+
     Strobe1s,       // Out, Single SlowClock Pulse @ 1 s
     Strobe488us,    // Out, Single SlowClock Pulse @ 488 us
     Strobe1ms,      // Out, Single SlowClock Pulse @ 1 ms

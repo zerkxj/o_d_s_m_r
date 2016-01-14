@@ -500,10 +500,8 @@ wire            WatchDogIREQ;
 //----------------------------------------------------------------------
 // Output
 //----------------------------------------------------------------------
-assign RST_DME_N = RST_PLTRST_N;
 assign UNLOCK_BIOS_ME = 1'bz;
 
-assign DMEControl = 6'h00;
 assign PMB_CLK = 1'b0;
 assign FPGA_TXD_N = 1'b0;
 
@@ -627,6 +625,7 @@ Lpc
            .IntReg(InterruptRegister),          // In, Interrupt register
            .FAN_PRSNT_N(FAN_PRSNT_N),           // In, FAN present status
            .BIOS_SEL(BIOS_SEL),                 // In, force select BIOS
+           .DME_PRSNT(~DME_Absent),              // In, DME present
            .JP4(1'b0),                          // In, jumper 4, for future use
            .PSU_status(PSU_status),             // In, power supply status
            .Dual_Supply(ufm_rd_data[1]),        // In, Dual Supply status, save in SPI FLASH
@@ -851,13 +850,13 @@ LED
            .CPLD_LAN_ACT_N(CPLD_LAN_ACT_N));            // Out, LAN ACTIVE LED
 
 UFMRwPageDecode
-    u_UFMRwPageDecode (.CLK_i(CLK33M),          // In, use for wishbone clock, so it should same as config in EFB of wishbone frequency
-                       .rst_n(InitResetn),          // In,
-                       .bWrPromCfg(bWrIntFlashPwrEvtCfg | bWrIntFlashDualPsCfg),     // In,
-                       .bRdPromCfg(bRdIntFlashPwrEvtCfg | bRdIntFlashDualPsCfg),     // In,
-                       .ufm_data_in({31'h7FFFFFFF, DualPSCfgWrBit, PwrLastStateWrBit}),    // In,
+    u_UFMRwPageDecode (.CLK_i(CLK33M),                                                  // In, use for wishbone clock, so it should same as config in EFB of wishbone frequency
+                       .rst_n(InitResetn),                                              // In,
+                       .bWrPromCfg(bWrIntFlashPwrEvtCfg | bWrIntFlashDualPsCfg),        // In,
+                       .bRdPromCfg(bRdIntFlashPwrEvtCfg | bRdIntFlashDualPsCfg),        // In,
+                       .ufm_data_in({31'h7FFFFFFF, DualPSCfgWrBit, PwrLastStateWrBit}), // In,
 
-                       .ufm_data_out(ufm_rd_data));    // Out,
+                       .ufm_data_out(ufm_rd_data)); // Out,
 
 DualPSCfg
     u_DualPSCfg (.ResetN(InitResetn),               // In,
@@ -884,5 +883,16 @@ WatchDog
                 .WatchDogOccurred(WatchDogOccurred),    // Out, occurr watch dog reset
                 .WatchDogReset(WatchDogReset),          // Out, System Watch Dog Reset Request
                 .WatchDogIREQ(WatchDogIREQ));           // Out, watch dog interrupt request
+
+DMEInit
+    u_DMEInit (.PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3), // In,
+               .RST_PLTRST_N(RST_PLTRST_N),             // In,
+               .DME_PWRGD(DME_PWRGD),                   // In,
+               .DME_Absent(DME_Absent),                 // In, high: DME absent, Low: DME exist
+               .DMEID(DMEID),                           // In,
+               .DMEStatus(DMEStatus),                   // In,
+
+               .RST_DME_N(RST_DME_N),       // Out,
+               .DMEControl(DMEControl));    // Out,
 
 endmodule  // end of ODS_MR,  top  module of this project

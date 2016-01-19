@@ -292,14 +292,16 @@ FanLED
               .Strobe16ms(Strobe16ms),          // In, Single SlowClock Pulse @ 16 ms
               .Beep(Beep),                      // In, Fan Fail - 1, FanOK - 0; - has internal weak P/U
               .FanLedCtrlReg(FanLedCtrlReg),    // In, Fan LED control register
-              .FanFail(FanFail),                // Out, Fan Led indication
-              .FanOK(FanOK));                   // Out, Fan Led indication
+
+              .FanFail(FanFail),    // Out, Fan Led indication
+              .FanOK(FanOK));       // Out, Fan Led indication
 
 LanLED
     u_LanLED (.ALL_PWRGD(ALL_PWRGD),    // In, ALL POWER GOOD
               .PActivity(PActivity),    // In, ACT#      signal from LAN controller
               .Speed1P(Speed1P),        // In, LINK1000# signal from LAN controller
               .Speed2P(Speed2P),        // In, LINK100#  signal from LAN controller
+
               .Speed1R(Speed1R),        // Out, LINK1000# output to BiColor LED
               .Speed2R(Speed2R),        // Out, LINK100#  output to BiColor LED
               .RActivity(RActivity));   // Out, ACT#      output to LED

@@ -27,13 +27,16 @@ module Lpc (
     JP4,                // In, jumper 4, for future use
     PSU_status,         // In, power supply status
     Dual_Supply,        // In, Dual Supply status, save in SPI FLASH
+    FlashAccess,        // In, Flash access(R/W)
     WatchDogOccurred,   // In, occurr watch dog reset
     WatchDogIREQ,       // In, watch dog interrupt request
+    DMEStatus,          // In, DME status
 
     BiosWDRegSW,    // Out, BIOS watch dog register from SW configuration
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 Segment LED select
     x7SegVal,       // Out, 7 Segment LED value
+    DMEControl,     // Out, DME Control
     WriteBiosWD,    // Out, BIOS watch dog register write
     WrBiosStsReg,   // Out, Write BIOS status register
     BiosWDReg,      // Out, BIOS watch dog register
@@ -95,8 +98,10 @@ input           DME_PRSNT;
 input           JP4;
 input   [5:4]   PSU_status;
 input           Dual_Supply;
+input           FlashAccess;
 input           WatchDogOccurred;
 input           WatchDogIREQ;
+input   [5:0]   DMEStatus;
 
 //--------------------------------------------------------------------------
 // Output declaration
@@ -105,6 +110,7 @@ output  [7:0]   BiosWDRegSW;
 output          SystemOK;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
+output  [5:0]   DMEControl;
 output          WriteBiosWD;
 output          WrBiosStsReg;
 output  [7:0]   BiosWDReg;
@@ -112,7 +118,7 @@ output          LBCF;
 output          NextBiosSW;
 output          ActiveBiosSW;
 output          WrIntReg;
-output  [2:0]   ClrIntSW;
+output  [6:4]   ClrIntSW;
 output  [7:0]   IntRegister;
 output  [7:0]   WatchDogReg;
 output  [7:0]   BiosPostData;
@@ -289,6 +295,7 @@ LpcReg
               .JP4(JP4),                            // In, jumper 4, for future use
               .PSU_status(PSU_status),              // In, power supply status
               .Dual_Supply(Dual_Supply),            // In, Dual Supply status, save in SPI FLASH
+              .FlashAccess(FlashAccess),            // In, Flash access(R/W)
               .WatchDogOccurred(WatchDogOccurred),  // In, occurr watch dog reset
               .WatchDogIREQ(WatchDogIREQ),          // In, watch dog interrupt request
 
@@ -300,6 +307,7 @@ LpcReg
               .WatchDogReg(WatchDogReg),        // Out, Watch Dog register
               .x7SegSel(x7SegSel),              // Out, 7 segment LED select
               .x7SegVal(x7SegVal),              // Out, 7 segment LED value
+              .DMEControl(DMEControl),          // Out, DME Control
               .SpecialCmdReg(SpecialCmdReg),    // Out, SW controled power shutdown register
               .FanLedCtrl(FanLedCtrl),          // Out, Fan LED control register
               .DataReg(DataReg));               // Out, Register data

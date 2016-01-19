@@ -68,7 +68,7 @@ localparam TD = 1;
 input           WatchDogIREQ;
 input           WrIntReg;
 input   [7:0]   DataIntReg;
-input   [2:0]   ClrIntSW;
+input   [6:4]   ClrIntSW;
 input   [3:0]   Interrupt;
 
 //--------------------------------------------------------------------------
@@ -161,7 +161,7 @@ assign ATX = DataIntReg[3];
 assign EnableInt = DataIntReg[2:0];
 assign ResetEvent = ATX ? Interrupt[0] : Interrupt[1];
 assign PowerEvent = ATX ? Interrupt[2] : Interrupt[3];
-assign IREQWatchDog = WatchDogIREQ | DataIntReg[6];
+assign IREQWatchDog = WatchDogIREQ | DataIntReg[6] & (!ClrIntSW[6]);
 assign IREQResetButton = ResetEvent | DataIntReg[5] & (!ClrIntSW[5]);
 assign IREQPwrButton = PowerEvent | DataIntReg[4] & (!ClrIntSW[4]);
 assign InterruptRequest = |({IREQWatchDog, IREQResetButton, IREQPwrButton} &

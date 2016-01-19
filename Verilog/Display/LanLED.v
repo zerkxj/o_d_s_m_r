@@ -28,6 +28,7 @@ module LanLED (
     PActivity,  // In, ACT#      signal from LAN controller
     Speed1P,    // In, LINK1000# signal from LAN controller
     Speed2P,    // In, LINK100#  signal from LAN controller
+
     Speed1R,    // Out, LINK1000# output to BiColor LED
     Speed2R,    // Out, LINK100#  output to BiColor LED
     RActivity   // Out, ACT#      output to LED

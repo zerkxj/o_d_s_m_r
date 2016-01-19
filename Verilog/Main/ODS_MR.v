@@ -387,7 +387,7 @@ wire            LBCF;
 wire            NextBiosSW;
 wire            ActiveBiosSW;
 wire            WrIntReg;
-wire            ClrIntSW;
+wire    [6:4]   ClrIntSW;
 wire    [7:0]   DataIntReg;
 wire    [7:0]   WatchDogReg;
 wire    [7:0]   BiosPostData;
@@ -625,17 +625,23 @@ Lpc
            .IntReg(InterruptRegister),          // In, Interrupt register
            .FAN_PRSNT_N(FAN_PRSNT_N),           // In, FAN present status
            .BIOS_SEL(BIOS_SEL),                 // In, force select BIOS
-           .DME_PRSNT(~DME_Absent),              // In, DME present
-           .JP4(1'b0),                          // In, jumper 4, for future use
+           .DME_PRSNT(~DME_Absent),             // In, DME present
+           .JP4(DualPs),                        // In, jumper 4, for future use
            .PSU_status(PSU_status),             // In, power supply status
            .Dual_Supply(ufm_rd_data[1]),        // In, Dual Supply status, save in SPI FLASH
+           .FlashAccess(bWrIntFlashPwrEvtCfg |
+                        bWrIntFlashDualPsCfg |
+                        bRdIntFlashPwrEvtCfg |
+                        bRdIntFlashDualPsCfg),  // In, Flash access(R/W)
            .WatchDogOccurred(WatchDogOccurred), // In, occurr watch dog reset
            .WatchDogIREQ(WatchDogIREQ),         // In, watch dog interrupt request
+           .DMEStatus(DMEStatus),               // In, DME status
 
            .BiosWDRegSW(BiosWDRegSW),       // Out, BIOS watch dog register from SW configuration
            .SystemOK(SystemOK),             // Out, System OK flag(software control)
            .x7SegSel(x7SegSel),             // Out, 7 Segment LED select
            .x7SegVal(x7SegVal),             // Out, 7 Segment LED value
+           .DMEControl(DMEControl),         // Out, DME Control
            .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
            .WrBiosStsReg(WrBiosStsReg),     // Out, Write BIOS status register
            .BiosWDReg(BiosWDReg),           // Out, BIOS watch dog register
@@ -892,7 +898,6 @@ DMEInit
                .DMEID(DMEID),                           // In,
                .DMEStatus(DMEStatus),                   // In,
 
-               .RST_DME_N(RST_DME_N),       // Out,
-               .DMEControl(DMEControl));    // Out,
+               .RST_DME_N(RST_DME_N));  // Out,
 
 endmodule  // end of ODS_MR,  top  module of this project

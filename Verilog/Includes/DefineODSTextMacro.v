@@ -39,6 +39,9 @@
 `define PwrSW_On        1
 `define PwrSW_Off       0
 
+`define NCC 4'h1
+`define NETCOP_MR4L 4'h2
+
 `define Event_InitPowerUp   0
 `define Event_PowerStandBy  1
 `define Event_Reboot        2

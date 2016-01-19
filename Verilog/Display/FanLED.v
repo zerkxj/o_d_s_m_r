@@ -31,6 +31,7 @@ module FanLED (
     Strobe16ms,     // In, Single SlowClock Pulse @ 16 ms
     Beep,           // In, Fan Fail - 1, FanOK - 0; - has internal weak P/U
     FanLedCtrlReg,  // In, Fan LED control register
+
     FanFail,        // Out, Fan Led indication
     FanOK           // Out, Fan Led indication
 );

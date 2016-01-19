@@ -22,8 +22,7 @@ module  DMEInit (
     DMEID,              // In,
     DMEStatus,          // In,
 
-    RST_DME_N,  // Out,
-    DMEControl  // Out,
+    RST_DME_N   // Out,
  );
 
 //------------------------------------------------------------------------------
@@ -67,7 +66,6 @@ input   [5:0]   DMEStatus;
 // Output declaration
 //--------------------------------------------------------------------------
 output          RST_DME_N;
-output  [5:0]   DMEControl;
 
 //------------------------------------------------------------------------------
 // Signal declaration
@@ -134,7 +132,6 @@ output  [5:0]   DMEControl;
 // Output
 //----------------------------------------------------------------------
 assign RST_DME_N = RST_PLTRST_N;
-assign DMEControl = {3'h0, PWRGD_PS_PWROK_3V3};
 
 //----------------------------------------------------------------------
 // Internal signal

@@ -15,7 +15,6 @@
 // Module declaration
 //------------------------------------------------------------------------------
 module  DMEInit (
-    PWRGD_PS_PWROK_3V3, // In,
     RST_PLTRST_N,       // In,
     DME_PWRGD,          // In,
     DME_Absent,         // In, high: DME absent, Low: DME exist
@@ -55,7 +54,6 @@ localparam TD = 1;
 //--------------------------------------------------------------------------
 // Input declaration
 //--------------------------------------------------------------------------
-input           PWRGD_PS_PWROK_3V3;
 input           RST_PLTRST_N;
 input           DME_PWRGD;
 input           DME_Absent;

@@ -270,8 +270,8 @@ assign FanLedCtrl = DataReg[27][3:0];
 //----------------------------------------------------------------------
 assign RdClrRegWDC = Rd & (Addr == 8'h0B);
 
-always @ (Addr or DataWrSW or IntReg or WatchDogOccurred or RdClrRegWDC or
-          WatchDogIREQ or FAN_PRSNT_N) begin
+always @ (Addr or DataWrSW or IntReg or DataReg[k] or WatchDogOccurred or
+          RdClrRegWDC or WatchDogIREQ or FAN_PRSNT_N) begin
     case (Addr)
         8'h09: DataWr = {DataWrSW[7], IntReg, DataWrSW[3:0]};
         8'h0B: DataWr = {DataReg[9][2], (WatchDogOccurred & (!RdClrRegWDC)),

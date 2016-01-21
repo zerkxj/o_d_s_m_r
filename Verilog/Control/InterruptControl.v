@@ -26,7 +26,6 @@
 //------------------------------------------------------------------------------
 module InterruptControl (
     WatchDogIREQ,       // In, Watch Dog Interrupt Request
-    WrIntReg,           // In, Write interrupt status and control register
     DataIntReg,         // In, Interrupt register(0x09)
     ClrIntSW,           // In, Clear interrupt from SW
     Interrupt,          // In, Power & Reset Interrupts and Button release
@@ -66,7 +65,6 @@ localparam TD = 1;
 // Input declaration
 //--------------------------------------------------------------------------
 input           WatchDogIREQ;
-input           WrIntReg;
 input   [7:0]   DataIntReg;
 input   [6:4]   ClrIntSW;
 input   [3:0]   Interrupt;
@@ -90,7 +88,6 @@ wire            ATX;
 wire    [2:0]   EnableInt;
 wire            ResetEvent;
 wire            PowerEvent;
-wire            WrIntReg;
 wire            IREQWatchDog;
 wire            IREQResetButton;
 wire            IREQPwrButton;

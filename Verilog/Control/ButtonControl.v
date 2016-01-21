@@ -26,7 +26,6 @@
 module ButtonControl (
     MainReset,          // In, Power or Controller ICH10R Reset
     SlowClock,          // In, Oscillator Clock 32,768 Hz
-    Strobe1s,           // In, Single SlowClock Pulse @ 1s
     Strobe16ms,         // In, Single SlowClock Pulse @ 16 ms
     Strobe125ms,        // In, Single SlowClock Pulse @ 125 ms
     SysReset,           // In, Reset Button
@@ -76,7 +75,6 @@ localparam TD = 1;
 //--------------------------------------------------------------------------
 input           MainReset;
 input           SlowClock;
-input           Strobe1s;
 input           Strobe16ms;
 input           Strobe125ms;
 input           SysReset;

@@ -368,25 +368,21 @@ output          FPGA_TXD_N;
 //----------------------------------------------------------------------
 // Combinational, module connection
 //----------------------------------------------------------------------
-wire            CLK32768;
-wire            InitResetn;
-wire            MainResetN;
-wire            SystemOK;
-
 wire            FM_PLD_DEBUG2;
 wire            FM_PLD_DEBUG3;
 wire            FM_PLD_DEBUG4;
 wire            FM_PLD_DEBUG5;
 
-wire    [7:0]   BiosWDRegSW;
-wire    [2:0]   BiosStatus;
+wire            SystemOK;
+wire    [4:0]   x7SegSel;
+wire    [7:0]   x7SegVal;
 wire            WriteBiosWD;
+wire    [7:0]   BiosWDRegSW;
 wire            WrBiosStsReg;
 wire    [7:0]   BiosWDReg;
 wire            LBCF;
 wire            NextBiosSW;
 wire            ActiveBiosSW;
-wire            WrIntReg;
 wire    [6:4]   ClrIntSW;
 wire    [7:0]   DataIntReg;
 wire    [7:0]   WatchDogReg;
@@ -400,17 +396,19 @@ wire            LoadWDTimer;
 
 wire            CLK33M;
 
+wire    [2:0]   BiosStatus;
+
+wire            CLK32768;
+wire            InitResetn;
+wire            MainResetN;
+
 wire            Strobe1s;
 wire            Strobe488us;
 wire            Strobe1ms;
 wire            Strobe16ms;
 wire            Strobe125ms;
 wire            Strobe125msec;
-wire            Counter;
-wire    [4:0]   x7SegSel;
-wire    [7:0]   x7SegVal;
-
-wire    [3:0]   PowerEvtState;
+wire    [14:0]  Counter;
 
 wire    [1:0]   DPx;
 wire            BiosFinished;
@@ -423,6 +421,7 @@ wire            PowerButtonDebounce;
 wire            ResetOut_ox;
 wire            RstBiosFlg;
 
+wire    [3:0]   PowerEvtState;
 wire            PsonFromPwrEvent;
 wire            bPwrSystemReset;
 wire            bPowerEvtFlashReg;
@@ -581,7 +580,7 @@ PwrSequence
                    .FM_THERMTRIP_CO_N(FM_THERMTRIP_CO_N),           // In
                    .FM_LVC3_THERMTRIP_DLY(FM_LVC3_THERMTRIP_DLY),   // Out
                    .IRQ_SML1_PMBUS_ALERT_BUF_N(1'b1),               // In,  IRQ_SML1_PMBUS_ALERT_BUF_N = 1
-                   .IRQ_FAN_12V_GATE(),                             // Out, IRQ_FAN_12V_GATE :reserved pin
+                   .IRQ_FAN_12V_GATE(IRQ_FAN_12V_GATE),             // Out, IRQ_FAN_12V_GATE
                    .FM_CPU_ERR1_CO_N(FM_CPU_ERR1_CO_N),             // In
                    .FM_ERR1_DLY_N(FM_ERR1_DLY_N),                   // Out
                    .RST_PLTRST_DLY(RST_PLTRST_DLY),                 // Out
@@ -637,18 +636,17 @@ Lpc
            .WatchDogIREQ(WatchDogIREQ),         // In, watch dog interrupt request
            .DMEStatus(DMEStatus),               // In, DME status
 
-           .BiosWDRegSW(BiosWDRegSW),       // Out, BIOS watch dog register from SW configuration
            .SystemOK(SystemOK),             // Out, System OK flag(software control)
            .x7SegSel(x7SegSel),             // Out, 7 Segment LED select
            .x7SegVal(x7SegVal),             // Out, 7 Segment LED value
            .DMEControl(DMEControl),         // Out, DME Control
            .WriteBiosWD(WriteBiosWD),       // Out, BIOS watch dog register write
+           .BiosWDRegSW(BiosWDRegSW),       // Out, BIOS watch dog register from SW configuration
            .WrBiosStsReg(WrBiosStsReg),     // Out, Write BIOS status register
            .BiosWDReg(BiosWDReg),           // Out, BIOS watch dog register
            .LBCF(LBCF),                     // Out, Lock BIOS Chip Flag
            .NextBiosSW(NextBiosSW),         // Out, Next BIOS SW configuration
            .ActiveBiosSW(ActiveBiosSW),     // Out, Active BIOS SW confguration
-           .WrIntReg(WrIntReg),             // Out, Write interrupt status and control register
            .ClrIntSW(ClrIntSW),             // Out, Clear interrupr from SW
            .IntRegister(DataIntReg),        // Out, Interrupt register
            .WatchDogReg(WatchDogReg),       // Out, Watch Dog register
@@ -764,7 +762,6 @@ BiosWatchDog
 ButtonControl
     u_ButtonControl (.MainReset(InitResetn),                    // In, Power or Controller ICH10R Reset
                      .SlowClock(CLK32768),                      // In, Oscillator Clock 32,768 Hz
-                     .Strobe1s(Strobe1s),                       // In, Single SlowClock Pulse @ 1s
                      .Strobe16ms(Strobe16ms),                   // In, Single SlowClock Pulse @ 16 ms
                      .Strobe125ms(Strobe125ms),                 // In, Single SlowClock Pulse @ 125 ms
                      .SysReset(SYS_RST_IN_N),                   // In, Reset Button
@@ -816,7 +813,6 @@ BiosWdtDecode
 
 InterruptControl
     u_InterruptControl (.WatchDogIREQ(WatchDogIREQ),    // In, Watch Dog Interrupt Request
-                        .WrIntReg(WrIntReg),            // In, Write interrupt status and control register
                         .DataIntReg(DataIntReg),        // In, Interrupt register(0x09)
                         .ClrIntSW(ClrIntSW),            // In, Clear interrupt from SW
                         .Interrupt(InterruptButton),    // In, Power & Reset Interrupts and Button release
@@ -860,7 +856,7 @@ UFMRwPageDecode
                        .rst_n(InitResetn),                                              // In,
                        .bWrPromCfg(bWrIntFlashPwrEvtCfg | bWrIntFlashDualPsCfg),        // In,
                        .bRdPromCfg(bRdIntFlashPwrEvtCfg | bRdIntFlashDualPsCfg),        // In,
-                       .ufm_data_in({31'h7FFFFFFF, DualPSCfgWrBit, PwrLastStateWrBit}), // In,
+                       .ufm_data_in({30'h3FFFFFFF, DualPSCfgWrBit, PwrLastStateWrBit}), // In,
 
                        .ufm_data_out(ufm_rd_data)); // Out,
 
@@ -891,8 +887,7 @@ WatchDog
                 .WatchDogIREQ(WatchDogIREQ));           // Out, watch dog interrupt request
 
 DMEInit
-    u_DMEInit (.PWRGD_PS_PWROK_3V3(PWRGD_PS_PWROK_3V3), // In,
-               .RST_PLTRST_N(RST_PLTRST_N),             // In,
+    u_DMEInit (.RST_PLTRST_N(RST_PLTRST_N),             // In,
                .DME_PWRGD(DME_PWRGD),                   // In,
                .DME_Absent(DME_Absent),                 // In, high: DME absent, Low: DME exist
                .DMEID(DMEID),                           // In,

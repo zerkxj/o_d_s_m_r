@@ -32,18 +32,17 @@ module Lpc (
     WatchDogIREQ,       // In, watch dog interrupt request
     DMEStatus,          // In, DME status
 
-    BiosWDRegSW,    // Out, BIOS watch dog register from SW configuration
     SystemOK,       // Out, System OK flag(software control)
     x7SegSel,       // Out, 7 Segment LED select
     x7SegVal,       // Out, 7 Segment LED value
     DMEControl,     // Out, DME Control
     WriteBiosWD,    // Out, BIOS watch dog register write
+    BiosWDRegSW,    // Out, BIOS watch dog register from SW configuration
     WrBiosStsReg,   // Out, Write BIOS status register
     BiosWDReg,      // Out, BIOS watch dog register
     LBCF,           // Out, Lock BIOS Chip Flag
     NextBiosSW,     // Out, Next BIOS SW configuration
     ActiveBiosSW,   // Out, Active BIOS SW confguration
-    WrIntReg,       // Out, Write interrupt status and control register
     ClrIntSW,       // Out, Clear interrupr from SW
     IntRegister,    // Out, Interrupt register
     WatchDogReg,    // Out, Watch Dog register
@@ -106,18 +105,17 @@ input   [5:0]   DMEStatus;
 //--------------------------------------------------------------------------
 // Output declaration
 //--------------------------------------------------------------------------
-output  [7:0]   BiosWDRegSW;
 output          SystemOK;
 output  [4:0]   x7SegSel;
 output  [7:0]   x7SegVal;
 output  [5:0]   DMEControl;
 output          WriteBiosWD;
+output  [7:0]   BiosWDRegSW;
 output          WrBiosStsReg;
 output  [7:0]   BiosWDReg;
 output          LBCF;
 output          NextBiosSW;
 output          ActiveBiosSW;
-output          WrIntReg;
 output  [6:4]   ClrIntSW;
 output  [7:0]   IntRegister;
 output  [7:0]   WatchDogReg;
@@ -138,6 +136,7 @@ output          LoadWDTimer;
 //----------------------------------------------------------------------
 // Combinational, module connection
 //----------------------------------------------------------------------
+wire            WrIntReg;
 wire            Opcode;
 wire            Wr;
 wire            Rd;
@@ -202,17 +201,17 @@ reg             Shutdown_d; // Shutdown delay 1T
 // Output
 //----------------------------------------------------------------------
 assign WriteBiosWD = Wr & (AddrReg == 8'h01);
+assign BiosWDRegSW = WriteBiosWD ? DataWr : 8'h00;
 assign WrBiosStsReg = Wr & (AddrReg == 8'h04);
 assign NextBiosSW = DataWr[1];
 assign ActiveBiosSW = DataWr[0];
-assign WrIntReg = Wr & (AddrReg == 8'h09);
 assign ClrIntSW = DataWr[6:4] & {3{WrIntReg}};
 assign LoadWDTimer = Wr & (AddrReg == 8'h0B);
 
 //----------------------------------------------------------------------
 // Internal signal
 //----------------------------------------------------------------------
-// None
+assign WrIntReg = Wr & (AddrReg == 8'h09);
 
 //----------------------------------------------------------------------
 // FSM
@@ -298,6 +297,7 @@ LpcReg
               .FlashAccess(FlashAccess),            // In, Flash access(R/W)
               .WatchDogOccurred(WatchDogOccurred),  // In, occurr watch dog reset
               .WatchDogIREQ(WatchDogIREQ),          // In, watch dog interrupt request
+              .DMEStatus(DMEStatus),                // In, DME status
 
               .BiosWDReg(BiosWDReg),            // Out, BIOS watch dog register
               .LBCF(LBCF),                      // Out, Lock BIOS Chip Flag
